@@ -1,11 +1,11 @@
--- PolyCode Hub v0.2.0 Database Schema
+-- PolyCode Hub v0.3.0 Database Schema
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
-CREATE TABLE public.assets (
+CREATE TABLE IF NOT EXISTS public.assets (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   slug TEXT UNIQUE NOT NULL,
   title TEXT NOT NULL,
-  category TEXT NOT NULL DEFAULT 'Props',
+  category TEXT NOT NULL DEFAULT 'Sci-Fi',
   author_name TEXT NOT NULL DEFAULT 'anonymous',
   version TEXT NOT NULL DEFAULT '1.0.0',
   code TEXT NOT NULL,
@@ -15,7 +15,7 @@ CREATE TABLE public.assets (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-CREATE TABLE public.pull_requests (
+CREATE TABLE IF NOT EXISTS public.pull_requests (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   asset_id UUID NOT NULL REFERENCES public.assets(id) ON DELETE CASCADE,
   author_name TEXT NOT NULL,

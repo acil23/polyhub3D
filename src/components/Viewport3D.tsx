@@ -37,7 +37,6 @@ export default function Viewport3D({
     const camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 1000);
     camera.position.set(3.8, 2.7, 4.4);
 
-    // Alpha: true agar menyatu dengan radial spotlight gradient CSS yang mewah
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'high-performance' });
     renderer.setSize(width, height);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
@@ -102,7 +101,6 @@ export default function Viewport3D({
     };
     animate();
 
-    // ResizeObserver mencegah canvas meluap (overflow) menutupi tombol kartu
     const resizeObserver = new ResizeObserver((entries) => {
       for (const entry of entries) {
         const w = entry.contentRect.width;
@@ -120,6 +118,7 @@ export default function Viewport3D({
       cancelAnimationFrame(reqId);
       resizeObserver.disconnect();
       renderer.dispose();
+      renderer.forceContextLoss();
       container.innerHTML = '';
     };
   }, []);

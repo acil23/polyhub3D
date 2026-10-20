@@ -10,11 +10,13 @@ export interface ParamSchemaItem {
 export type ParamSchema = Record<string, ParamSchemaItem>;
 export type ParamValues = Record<string, any>;
 
+export type AssetCategory = 'Nature' | 'Sci-Fi' | 'Weapons' | 'Architecture' | 'Primitives';
+
 export interface Asset3D {
   id: string;
   slug: string;
   title: string;
-  category: 'Nature' | 'Sci-Fi' | 'Weapons' | 'Architecture' | 'Primitives';
+  category: AssetCategory;
   author_name: string;
   version: string;
   code: string;

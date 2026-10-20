@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { DiffEditor } from '@monaco-editor/react';
 import Viewport3D from './Viewport3D';
 import { compileProceduralCode } from '@/lib/compiler';
 import { Asset3D, PullRequest3D } from '@/types/polycode';
@@ -23,15 +24,24 @@ export default function PullRequestModal({
   const baseCompiled = compileProceduralCode(baseAsset.code);
   const proposedCompiled = compileProceduralCode(pr.proposed_code);
 
+  const vertDiff = proposedCompiled.stats.vertices - baseCompiled.stats.vertices;
+  const triDiff = proposedCompiled.stats.triangles - baseCompiled.stats.triangles;
+
   return (
-    <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-6">
-      <div className="bg-zinc-950 border border-white/15 rounded-2xl max-w-6xl w-full max-h-[90vh] flex flex-col overflow-hidden shadow-2xl">
-        <div className="p-5 border-b border-white/10 flex items-center justify-between bg-zinc-900/50">
+    <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4 sm:p-6">
+      <div className="bg-zinc-950 border border-white/15 rounded-3xl max-w-6xl w-full max-h-[92vh] flex flex-col overflow-hidden shadow-2xl">
+        {/* Header */}
+        <div className="p-5 border-b border-white/10 flex items-center justify-between bg-zinc-900/60">
           <div>
-            <span className="text-xs px-2.5 py-1 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30 font-semibold">
-              Visual 3D Pull Request #{pr.id}
-            </span>
-            <h2 className="text-lg font-bold text-white mt-1.5">{pr.title}</h2>
+            <div className="flex items-center gap-2">
+              <span className="text-xs px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30 font-semibold">
+                Visual 3D & Monaco Diff Review #{pr.id}
+              </span>
+              <span className="text-xs font-mono text-zinc-400">
+                Delta: {vertDiff >= 0 ? `+${vertDiff}` : vertDiff} verts / {triDiff >= 0 ? `+${triDiff}` : triDiff} tris
+              </span>
+            </div>
+            <h2 className="text-lg font-bold text-white mt-1">{pr.title}</h2>
             <p className="text-xs text-zinc-400">
               Diajukan oleh <strong className="text-zinc-200">@{pr.author_name}</strong> untuk memperbarui{' '}
               <strong className="text-blue-400">{baseAsset.title} (v{baseAsset.version})</strong>
@@ -45,58 +55,78 @@ export default function PullRequestModal({
           </button>
         </div>
 
-        <div className="p-6 overflow-y-auto space-y-5 flex-1">
-          <p className="text-sm text-zinc-300 bg-zinc-900/80 p-4 rounded-xl border border-white/10">
+        {/* Body */}
+        <div className="p-5 overflow-y-auto space-y-5 flex-1">
+          <p className="text-xs sm:text-sm text-zinc-300 bg-zinc-900/80 p-3.5 rounded-xl border border-white/10">
             {pr.description}
           </p>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-            <div className="border border-white/10 rounded-2xl p-3.5 bg-zinc-900/40">
-              <div className="flex justify-between text-xs mb-2.5">
-                <span className="font-bold text-zinc-400">MODEL SAAT INI (v{baseAsset.version})</span>
+          {/* Dual 3D Viewport Comparison */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="border border-white/10 rounded-2xl p-3 bg-zinc-900/40">
+              <div className="flex justify-between text-xs mb-2">
+                <span className="font-bold text-zinc-400">BASE MODEL (v{baseAsset.version})</span>
                 <span className="font-mono text-zinc-400">
                   {baseCompiled.stats.vertices} verts • {baseCompiled.stats.triangles} tris
                 </span>
               </div>
-              <div className="h-64 rounded-xl overflow-hidden border border-white/5">
+              <div className="h-56 rounded-xl overflow-hidden border border-white/5">
                 <Viewport3D modelGroup={baseCompiled.group} />
               </div>
             </div>
 
-            <div className="border border-emerald-500/40 rounded-2xl p-3.5 bg-emerald-950/15">
-              <div className="flex justify-between text-xs mb-2.5">
-                <span className="font-bold text-emerald-400">USULAN PERUBAHAN (PR)</span>
+            <div className="border border-emerald-500/40 rounded-2xl p-3 bg-emerald-950/15">
+              <div className="flex justify-between text-xs mb-2">
+                <span className="font-bold text-emerald-400">PROPOSED PR UPDATE</span>
                 <span className="font-mono text-emerald-300">
                   {proposedCompiled.stats.vertices} verts • {proposedCompiled.stats.triangles} tris
                 </span>
               </div>
-              <div className="h-64 rounded-xl overflow-hidden border border-emerald-500/30">
+              <div className="h-56 rounded-xl overflow-hidden border border-emerald-500/30">
                 <Viewport3D modelGroup={proposedCompiled.group} />
               </div>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-5 text-xs font-mono">
-            <pre className="p-4 rounded-xl bg-zinc-900/90 border border-white/10 overflow-x-auto text-zinc-400 max-h-56">
-              {baseAsset.code}
-            </pre>
-            <pre className="p-4 rounded-xl bg-emerald-950/25 border border-emerald-500/30 overflow-x-auto text-emerald-200 max-h-56">
-              {pr.proposed_code}
-            </pre>
+          {/* VS Code Monaco Side-by-Side DiffEditor */}
+          <div className="border border-white/15 rounded-2xl overflow-hidden bg-zinc-900/60">
+            <div className="px-4 py-2 border-b border-white/10 flex items-center justify-between text-xs text-zinc-400 bg-zinc-950/80">
+              <span className="font-semibold text-zinc-200">Monaco Side-by-Side Code Diff Inspector</span>
+              <span className="font-mono text-[11px]">Merah: Kode Lama • Hijau: Usulan PR</span>
+            </div>
+            <div className="h-72 w-full">
+              <DiffEditor
+                height="100%"
+                language="javascript"
+                theme="vs-dark"
+                original={baseAsset.code}
+                modified={pr.proposed_code}
+                options={{
+                  readOnly: true,
+                  renderSideBySide: true,
+                  minimap: { enabled: false },
+                  fontSize: 12,
+                  scrollBeyondLastLine: false,
+                  automaticLayout: true
+                }}
+              />
+            </div>
           </div>
         </div>
 
+        {/* Footer Actions */}
         {pr.status === 'open' && (
           <div className="p-4 border-t border-white/10 flex justify-end gap-3 bg-zinc-900/60">
             <button
               onClick={() => onReject(pr.id)}
-              className="px-4 py-2 rounded-xl bg-red-500/15 text-red-300 border border-red-500/30 hover:bg-red-500/25 text-sm font-medium transition"
+              className="px-4 py-2 rounded-xl bg-red-500/15 text-red-300 border border-red-500/30 hover:bg-red-500/25 text-xs sm:text-sm font-medium transition"
             >
               Tolak PR
             </button>
             <button
+              disabled={Boolean(proposedCompiled.error)}
               onClick={() => onMerge(pr)}
-              className="px-5 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-500 hover:to-teal-400 text-white text-sm font-semibold shadow-lg shadow-emerald-600/30 transition"
+              className="px-5 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-500 hover:to-teal-400 disabled:opacity-40 text-white text-xs sm:text-sm font-semibold shadow-lg shadow-emerald-600/30 transition"
             >
               Approve & Merge ke Katalog Utama
             </button>

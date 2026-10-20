@@ -9,15 +9,67 @@ export interface CompileResult {
   error: string | null;
 }
 
+const FORBIDDEN_PATTERNS: { pattern: RegExp; name: string }[] = [
+  { pattern: /\bwindow\b/, name: 'window' },
+  { pattern: /\bdocument\b/, name: 'document' },
+  { pattern: /\bfetch\b/, name: 'fetch()' },
+  { pattern: /\bXMLHttpRequest\b/, name: 'XMLHttpRequest' },
+  { pattern: /\blocalStorage\b/, name: 'localStorage' },
+  { pattern: /\bsessionStorage\b/, name: 'sessionStorage' },
+  { pattern: /\bindexedDB\b/, name: 'indexedDB' },
+  { pattern: /\beval\b/, name: 'eval()' },
+  { pattern: /\bFunction\b/, name: 'Function constructor' },
+  { pattern: /\bWebSocket\b/, name: 'WebSocket' },
+  { pattern: /\bnavigator\b/, name: 'navigator' },
+  { pattern: /\blocation\b/, name: 'location' },
+  { pattern: /\bcookie\b/, name: 'cookie' },
+];
+
+/**
+ * Menyuntikkan pengaman iterasi & batas waktu (350ms) ke dalam loop for/while/do
+ * untuk mencegah browser hang akibat infinite loop.
+ */
+function injectLoopGuards(rawCode: string): string {
+  let guarded = rawCode;
+  guarded = guarded.replace(
+    /\b(for|while)\s*\(([^)]*)\)\s*\{/g,
+    '$1 ($2) { __guard();'
+  );
+  guarded = guarded.replace(
+    /\bdo\s*\{/g,
+    'do { __guard();'
+  );
+  return guarded;
+}
+
 export function compileProceduralCode(
   code: string,
   overrideValues?: ParamValues
 ): CompileResult {
   const start = performance.now();
   try {
+    // 1. Static Sandbox Security Inspection
+    for (const rule of FORBIDDEN_PATTERNS) {
+      if (rule.pattern.test(code)) {
+        throw new Error(
+          `Security Sandbox Violation: Penggunaan API '${rule.name}' dilarang di dalam skrip 3D.`
+        );
+      }
+    }
+
+    // 2. Inject Anti-Infinite Loop Guard
+    const safeCode = injectLoopGuards(code);
+
     const wrappedBody = `
       "use strict";
-      ${code}
+      let __iters = 0;
+      const __startMs = performance.now();
+      function __guard() {
+        if (++__iters > 100000 || (performance.now() - __startMs) > 350) {
+          throw new Error("Execution Timeout: Loop melebihi batas aman (100.000 iterasi atau >350ms).");
+        }
+      }
+      ${safeCode}
       return {
         params: typeof params !== 'undefined' ? params : {},
         createAsset: typeof createAsset === 'function' ? createAsset : null
@@ -69,6 +121,10 @@ export function compileProceduralCode(
         }
       }
     });
+
+    if (vertices > 250000) {
+      throw new Error(`Mesh terlalu padat (${vertices} vertices). Batas maksimum adalah 250.000 vertices.`);
+    }
 
     const compileTimeMs = Math.round((performance.now() - start) * 10) / 10;
     const scriptSizeKB = (new Blob([code]).size / 1024).toFixed(2);

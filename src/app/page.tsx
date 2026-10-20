@@ -1,17 +1,28 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import Viewport3D from '@/components/Viewport3D';
+import CatalogCard3D from '@/components/CatalogCard3D';
 import ParametricControls from '@/components/ParametricControls';
 import MonacoCodeEditor from '@/components/MonacoCodeEditor';
 import PullRequestModal from '@/components/PullRequestModal';
+import { ForkPublishModal, SubmitPRModal } from '@/components/ActionModals';
 import { INITIAL_ASSETS, INITIAL_PULL_REQUESTS } from '@/lib/seedData';
 import { compileProceduralCode } from '@/lib/compiler';
 import { exportToOBJ, exportToGLB } from '@/lib/exporter';
 import { isSupabaseConfigured } from '@/lib/supabase';
-import { Asset3D, PullRequest3D, ParamValues } from '@/types/polycode';
+import {
+  fetchAllAssets,
+  fetchAllPullRequests,
+  saveNewAsset,
+  createNewPullRequest,
+  mergePullRequestRepo,
+  rejectPullRequestRepo,
+  resetLocalDemoData
+} from '@/lib/repository';
+import { Asset3D, AssetCategory, PullRequest3D, ParamValues } from '@/types/polycode';
 
-const CATEGORIES = ['All', 'Nature', 'Sci-Fi', 'Weapons', 'Architecture'] as const;
+const CATEGORIES = ['All', 'Nature', 'Sci-Fi', 'Weapons', 'Architecture', 'Primitives'] as const;
 
 export default function PolyCodeHubApp() {
   const [activeTab, setActiveTab] = useState<'explore' | 'studio' | 'prs'>('explore');
@@ -29,7 +40,27 @@ export default function PolyCodeHubApp() {
   const [autoRotate, setAutoRotate] = useState(true);
   const [showGrid, setShowGrid] = useState(true);
   const [lightingPreset, setLightingPreset] = useState<'cyber' | 'studio' | 'emerald'>('cyber');
+
   const [inspectingPR, setInspectingPR] = useState<PullRequest3D | null>(null);
+  const [showForkModal, setShowForkModal] = useState(false);
+  const [showPRModal, setShowPRModal] = useState(false);
+  const [toastMsg, setToastMsg] = useState<string | null>(null);
+
+  const triggerToast = (msg: string) => {
+    setToastMsg(msg);
+    setTimeout(() => setToastMsg(null), 3800);
+  };
+
+  useEffect(() => {
+    fetchAllAssets().then((loaded) => {
+      setAssets(loaded);
+      if (loaded.length > 0) {
+        setSelectedAsset(loaded[0]);
+        setEditorCode(loaded[0].code);
+      }
+    });
+    fetchAllPullRequests().then(setPullRequests);
+  }, []);
 
   const compiled = useMemo(
     () => compileProceduralCode(editorCode, paramOverrides),
@@ -59,63 +90,83 @@ export default function PolyCodeHubApp() {
     if (!res.group) return;
     if (format === 'obj') exportToOBJ(res.group, asset.slug);
     else exportToGLB(res.group, asset.slug);
+    triggerToast(`Mengunduh ${asset.slug}.${format.toUpperCase()}...`);
   };
 
-  const handleForkAsset = () => {
-    const title = prompt('Nama Aset Baru (Fork/Remix):', `${selectedAsset.title} (Remix)`);
-    if (!title) return;
+  const handleConfirmFork = async (data: {
+    title: string;
+    category: AssetCategory;
+    authorName: string;
+  }) => {
     const newAsset: Asset3D = {
       id: `asset-${Date.now()}`,
-      slug: title.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
-      title,
-      category: selectedAsset.category,
-      author_name: 'you_creator',
+      slug: data.title.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
+      title: data.title,
+      category: data.category,
+      author_name: data.authorName,
       version: '1.0.0',
       code: editorCode,
       downloads: 1,
       forked_from: selectedAsset.id,
       created_at: new Date().toISOString()
     };
-    setAssets([newAsset, ...assets]);
+    const updated = await saveNewAsset(newAsset, assets);
+    setAssets(updated);
     setSelectedAsset(newAsset);
+    setShowForkModal(false);
     setActiveTab('explore');
+    triggerToast(`Aset "${newAsset.title}" berhasil diterbitkan ke Katalog!`);
   };
 
-  const handleSubmitPR = () => {
-    const title = prompt('Judul Pull Request:', `Optimasi Geometri pada ${selectedAsset.title}`);
-    if (!title) return;
-    const description = prompt('Deskripsi perubahan:', 'Menambahkan detail parameter dan merapikan mesh.') || '';
+  const handleConfirmPR = async (data: {
+    title: string;
+    description: string;
+    authorName: string;
+  }) => {
     const newPR: PullRequest3D = {
       id: `pr-${Date.now().toString().slice(-3)}`,
       asset_id: selectedAsset.id,
       asset_title: selectedAsset.title,
-      author_name: 'you_contributor',
-      title,
-      description,
+      author_name: data.authorName,
+      title: data.title,
+      description: data.description,
       proposed_code: editorCode,
       status: 'open',
       created_at: new Date().toISOString()
     };
-    setPullRequests([newPR, ...pullRequests]);
+    const updated = await createNewPullRequest(newPR, pullRequests);
+    setPullRequests(updated);
+    setShowPRModal(false);
     setActiveTab('prs');
+    triggerToast(`Pull Request #${newPR.id} berhasil diajukan!`);
   };
 
-  const handleMergePR = (pr: PullRequest3D) => {
-    setAssets((prev) =>
-      prev.map((a) => {
-        if (a.id !== pr.asset_id) return a;
-        const parts = a.version.split('.').map(Number);
-        const nextVer = `${parts[0]}.${(parts[1] || 0) + 1}.0`;
-        return { ...a, code: pr.proposed_code, version: nextVer };
-      })
+  const handleMergePR = async (pr: PullRequest3D) => {
+    const { assets: updatedAssets, prs: updatedPRs } = await mergePullRequestRepo(
+      pr,
+      assets,
+      pullRequests
     );
-    setPullRequests((prev) => prev.map((item) => (item.id === pr.id ? { ...item, status: 'merged' } : item)));
+    setAssets(updatedAssets);
+    setPullRequests(updatedPRs);
     setInspectingPR(null);
+    triggerToast(`PR #${pr.id} berhasil di-merge! Versi model telah diperbarui.`);
   };
 
-  const handleRejectPR = (prId: string) => {
-    setPullRequests((prev) => prev.map((item) => (item.id === prId ? { ...item, status: 'rejected' } : item)));
+  const handleRejectPR = async (prId: string) => {
+    const updatedPRs = await rejectPullRequestRepo(prId, pullRequests);
+    setPullRequests(updatedPRs);
     setInspectingPR(null);
+    triggerToast(`Pull Request #${prId} ditolak.`);
+  };
+
+  const handleResetDemo = () => {
+    const { assets: resetA, prs: resetP } = resetLocalDemoData();
+    setAssets(resetA);
+    setPullRequests(resetP);
+    setSelectedAsset(resetA[0]);
+    setEditorCode(resetA[0].code);
+    triggerToast('Data katalog di-reset ke kondisi awal v0.3.0.');
   };
 
   return (
@@ -124,6 +175,14 @@ export default function PolyCodeHubApp() {
       <div className="pointer-events-none fixed -top-40 left-1/4 w-[600px] h-[600px] rounded-full bg-blue-600/15 blur-[140px] z-0" />
       <div className="pointer-events-none fixed top-1/3 -right-40 w-[550px] h-[550px] rounded-full bg-purple-600/15 blur-[150px] z-0" />
       <div className="pointer-events-none fixed -bottom-40 left-10 w-[500px] h-[500px] rounded-full bg-cyan-500/10 blur-[130px] z-0" />
+
+      {/* Toast Notification */}
+      {toastMsg && (
+        <div className="fixed bottom-6 right-6 z-50 bg-zinc-900/95 border border-blue-500/40 text-blue-200 px-4 py-3 rounded-2xl shadow-2xl backdrop-blur-xl text-xs font-semibold flex items-center gap-2">
+          <span className="w-2 h-2 rounded-full bg-blue-400 animate-ping" />
+          <span>{toastMsg}</span>
+        </div>
+      )}
 
       {/* Glassmorphic Top Navbar */}
       <header className="border-b border-white/10 px-6 py-4 flex flex-wrap items-center justify-between bg-zinc-950/75 sticky top-0 z-30 backdrop-blur-xl">
@@ -136,12 +195,12 @@ export default function PolyCodeHubApp() {
               <span className="font-bold text-lg tracking-tight bg-gradient-to-r from-white via-zinc-100 to-zinc-400 bg-clip-text text-transparent">
                 PolyCode Hub
               </span>
-              <span className="text-[11px] px-2.5 py-0.5 rounded-full bg-blue-500/15 border border-blue-500/30 text-blue-300 font-mono font-semibold">
-                v0.2.0 Studio
+              <span className="text-[11px] px-2.5 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 font-mono font-semibold">
+                v0.3.0 Core
               </span>
             </div>
             <p className="text-[11px] text-zinc-400 hidden sm:block">
-              Procedural 3D Asset Engine • Zero Server Storage
+              Hover WebGL Limiter • Loop Guard Sandbox • Monaco Diff
             </p>
           </div>
         </div>
@@ -182,14 +241,23 @@ export default function PolyCodeHubApp() {
           </button>
         </nav>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2.5">
           <div className="text-xs px-3 py-1.5 rounded-xl bg-zinc-900/90 border border-white/10 flex items-center gap-2">
-            <span className={`w-2 h-2 rounded-full ${isSupabaseConfigured ? 'bg-emerald-400' : 'bg-amber-400 animate-pulse'}`} />
-            <span className="text-zinc-400">Engine:</span>
-            <span className={isSupabaseConfigured ? 'text-emerald-300 font-semibold' : 'text-amber-300 font-semibold'}>
-              {isSupabaseConfigured ? 'Supabase Cloud' : 'Local Hybrid'}
+            <span className={`w-2 h-2 rounded-full ${isSupabaseConfigured ? 'bg-emerald-400' : 'bg-blue-400 animate-pulse'}`} />
+            <span className="text-zinc-400">Storage:</span>
+            <span className={isSupabaseConfigured ? 'text-emerald-300 font-semibold' : 'text-blue-300 font-semibold'}>
+              {isSupabaseConfigured ? 'Supabase Cloud' : 'Persistent LocalStorage'}
             </span>
           </div>
+          {!isSupabaseConfigured && (
+            <button
+              onClick={handleResetDemo}
+              title="Reset LocalStorage ke 6 Aset Default"
+              className="text-[11px] px-2.5 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-zinc-400 hover:text-white transition"
+            >
+              Reset Data
+            </button>
+          )}
         </div>
       </header>
 
@@ -201,7 +269,7 @@ export default function PolyCodeHubApp() {
             <div className="relative rounded-3xl border border-white/15 bg-gradient-to-br from-zinc-900/90 via-zinc-950/90 to-indigo-950/40 p-8 overflow-hidden shadow-2xl">
               <div className="max-w-3xl space-y-4 relative z-10">
                 <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-400/30 text-blue-300 text-xs font-semibold">
-                  <span>✨ NEXT-GEN PROCEDURAL 3D REPOSITORY</span>
+                  <span>✨ v0.3 PRODUCTION CORE • AUTO-SNAPSHOT & HOVER WEBGL</span>
                 </div>
                 <h1 className="text-3xl sm:text-5xl font-extrabold tracking-tight text-white leading-tight">
                   Infinite 3D Assets.{' '}
@@ -210,23 +278,8 @@ export default function PolyCodeHubApp() {
                   </span>
                 </h1>
                 <p className="text-sm sm:text-base text-zinc-300 leading-relaxed max-w-2xl">
-                  Setiap objek 3D di bawah ini dibangun secara <em>real-time</em> dari skrip Three.js berukuran ~1.5 KB. Putar langsung di kartu katalog, kustomisasi bentuknya dengan <em>Parametric Sliders</em>, lalu unduh sebagai file <strong>.GLB</strong> atau <strong>.OBJ</strong> siap pakai untuk Blender, Unity, dan Unreal Engine.
+                  Katalog ini kini dilengkapi <strong>Singleton Offscreen Snapshot</strong>: kartu di bawah menampilkan tangkapan gambar <code>.webp</code> ultra-ringan dan otomatis menyalakan mesin <strong>WebGL 3D Interaktif saat di-hover kursor</strong>—bebas <em>crash</em> meskipun memuat ratusan aset!
                 </p>
-
-                <div className="pt-2 flex flex-wrap gap-6 text-xs text-zinc-300">
-                  <div className="flex items-center gap-2.5 bg-white/5 px-3.5 py-2 rounded-xl border border-white/10">
-                    <span className="text-blue-400 font-bold text-base">99.8%</span>
-                    <span className="text-zinc-400">Hemat Storage Server</span>
-                  </div>
-                  <div className="flex items-center gap-2.5 bg-white/5 px-3.5 py-2 rounded-xl border border-white/10">
-                    <span className="text-emerald-400 font-bold text-base">.GLB & .OBJ</span>
-                    <span className="text-zinc-400">Instan Client-Side Export</span>
-                  </div>
-                  <div className="flex items-center gap-2.5 bg-white/5 px-3.5 py-2 rounded-xl border border-white/10">
-                    <span className="text-purple-400 font-bold text-base">Git-Style PR</span>
-                    <span className="text-zinc-400">Open-Source 3D Collaboration</span>
-                  </div>
-                </div>
               </div>
             </div>
 
@@ -259,85 +312,16 @@ export default function PolyCodeHubApp() {
               </div>
             </div>
 
-            {/* Luxury 3D Asset Cards Grid (Fixed Overflow & Z-Index) */}
+            {/* Smart Catalog Grid with WebGL Hover Limiter */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-7">
-              {filteredAssets.map((asset) => {
-                const preview = compileProceduralCode(asset.code);
-                return (
-                  <div
-                    key={asset.id}
-                    className="group relative rounded-3xl border border-white/10 hover:border-blue-500/60 bg-zinc-900/50 backdrop-blur-md overflow-hidden flex flex-col transition-all duration-300 hover:shadow-[0_20px_50px_rgba(37,99,235,0.2)]"
-                  >
-                    {/* 3D Viewport Container - Locked Height & Overflow Hidden */}
-                    <div className="h-64 w-full relative overflow-hidden z-0 border-b border-white/10">
-                      <Viewport3D modelGroup={preview.group} autoRotate={true} showGrid={true} />
-
-                      {/* Top Badges */}
-                      <div className="absolute top-3.5 left-3.5 right-3.5 flex items-center justify-between pointer-events-none z-10">
-                        <span className="text-[11px] font-semibold bg-zinc-950/85 backdrop-blur-md border border-white/15 px-3 py-1 rounded-full text-zinc-200">
-                          {asset.category}
-                        </span>
-                        <span className="text-[11px] bg-blue-950/90 backdrop-blur-md border border-blue-400/40 px-2.5 py-1 rounded-full font-mono text-blue-300 font-semibold">
-                          ⚡ {preview.stats.scriptSizeKB} KB
-                        </span>
-                      </div>
-
-                      {/* Bottom Telemetry Pill inside Viewport */}
-                      <div className="absolute bottom-3 left-3.5 right-3.5 flex items-center justify-between pointer-events-none z-10">
-                        <span className="text-[10px] font-mono bg-black/70 backdrop-blur px-2.5 py-1 rounded-lg text-zinc-300 border border-white/10">
-                          {preview.stats.vertices} Verts • {preview.stats.triangles} Tris
-                        </span>
-                        <span className="text-[10px] font-mono bg-emerald-950/85 text-emerald-300 px-2.5 py-1 rounded-lg border border-emerald-500/30">
-                          Interactive 3D
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Card Footer & Action Buttons - Separated on z-10 so it is NEVER covered */}
-                    <div className="p-5 bg-zinc-950/95 relative z-10 flex-1 flex flex-col justify-between space-y-4">
-                      <div>
-                        <div className="flex items-center justify-between gap-2">
-                          <h3 className="font-bold text-base text-white group-hover:text-blue-400 transition">
-                            {asset.title}
-                          </h3>
-                          <span className="text-xs font-mono px-2 py-0.5 rounded bg-zinc-800 text-zinc-300">
-                            v{asset.version}
-                          </span>
-                        </div>
-                        <p className="text-xs text-zinc-400 mt-1 flex items-center justify-between">
-                          <span>
-                            Kreator: <strong className="text-zinc-200">@{asset.author_name}</strong>
-                          </span>
-                          <span>{asset.downloads} unduhan</span>
-                        </p>
-                      </div>
-
-                      <div className="flex items-center gap-2 pt-1">
-                        <button
-                          onClick={() => handleSelectAsset(asset)}
-                          className="flex-1 py-2.5 px-4 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-semibold text-xs shadow-lg shadow-blue-600/25 transition flex items-center justify-center gap-1.5"
-                        >
-                          <span>Buka di 3D Studio</span>
-                        </button>
-                        <button
-                          onClick={(e) => handleQuickExport(e, asset, 'glb')}
-                          title="Unduh Langsung File .GLB"
-                          className="py-2.5 px-3 rounded-xl bg-emerald-600/20 hover:bg-emerald-600/35 text-emerald-300 border border-emerald-500/30 font-mono font-semibold text-xs transition"
-                        >
-                          .GLB
-                        </button>
-                        <button
-                          onClick={(e) => handleQuickExport(e, asset, 'obj')}
-                          title="Unduh Langsung File .OBJ"
-                          className="py-2.5 px-3 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-white/10 font-mono font-semibold text-xs transition"
-                        >
-                          .OBJ
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
+              {filteredAssets.map((asset) => (
+                <CatalogCard3D
+                  key={`${asset.id}-${asset.version}`}
+                  asset={asset}
+                  onSelect={handleSelectAsset}
+                  onQuickExport={handleQuickExport}
+                />
+              ))}
             </div>
           </div>
         )}
@@ -397,8 +381,8 @@ export default function PolyCodeHubApp() {
                   lightingPreset={lightingPreset}
                 />
                 {compiled.error && (
-                  <div className="absolute bottom-3 inset-x-3 bg-red-950/95 border border-red-500 text-red-200 p-3.5 rounded-xl text-xs font-mono z-20">
-                    Compile Error: {compiled.error}
+                  <div className="absolute bottom-3 inset-x-3 bg-red-950/95 border border-red-500 text-red-200 p-3.5 rounded-xl text-xs font-mono z-20 shadow-xl">
+                    🛡️ {compiled.error}
                   </div>
                 )}
               </div>
@@ -407,19 +391,29 @@ export default function PolyCodeHubApp() {
                 <div className="text-xs text-zinc-400 font-mono">
                   <span className="text-zinc-200 font-semibold">{compiled.stats.vertices}</span> Verts •{' '}
                   <span className="text-zinc-200 font-semibold">{compiled.stats.triangles}</span> Tris •{' '}
-                  <span className="text-blue-400">{compiled.stats.scriptSizeKB} KB</span>
+                  <span className="text-emerald-400">{compiled.stats.compileTimeMs}ms</span>
                 </div>
                 <div className="flex gap-2.5">
                   <button
                     disabled={!compiled.group}
-                    onClick={() => compiled.group && exportToOBJ(compiled.group, selectedAsset.slug)}
+                    onClick={() => {
+                      if (compiled.group) {
+                        exportToOBJ(compiled.group, selectedAsset.slug);
+                        triggerToast(`Mengunduh ${selectedAsset.slug}.obj`);
+                      }
+                    }}
                     className="px-4 py-2 rounded-xl bg-zinc-800 hover:bg-zinc-700 border border-white/15 text-white text-xs font-semibold transition"
                   >
                     Unduh .OBJ
                   </button>
                   <button
                     disabled={!compiled.group}
-                    onClick={() => compiled.group && exportToGLB(compiled.group, selectedAsset.slug)}
+                    onClick={() => {
+                      if (compiled.group) {
+                        exportToGLB(compiled.group, selectedAsset.slug);
+                        triggerToast(`Mengunduh ${selectedAsset.slug}.glb`);
+                      }
+                    }}
                     className="px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-500 hover:to-teal-400 text-white text-xs font-semibold shadow-lg shadow-emerald-600/25 transition"
                   >
                     Unduh .GLB (glTF)
@@ -441,19 +435,26 @@ export default function PolyCodeHubApp() {
             {/* Live Code Editor Column */}
             <div className="lg:col-span-4 flex flex-col border border-white/15 rounded-3xl bg-zinc-900/50 backdrop-blur-xl overflow-hidden shadow-2xl">
               <div className="p-4 border-b border-white/10 flex items-center justify-between bg-zinc-950/60">
-                <span className="text-xs font-bold uppercase tracking-wider text-zinc-300">
-                  Procedural Three.js Code
-                </span>
+                <div>
+                  <span className="text-xs font-bold uppercase tracking-wider text-zinc-200 block">
+                    Sandboxed Three.js Script
+                  </span>
+                  <span className="text-[10px] text-emerald-400 font-mono">
+                    ✓ Loop Timeout & API Guard Active
+                  </span>
+                </div>
                 <div className="flex gap-2">
                   <button
-                    onClick={handleForkAsset}
-                    className="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/15 border border-white/10 text-xs font-semibold text-zinc-100 transition"
+                    disabled={Boolean(compiled.error)}
+                    onClick={() => setShowForkModal(true)}
+                    className="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/15 disabled:opacity-40 border border-white/10 text-xs font-semibold text-zinc-100 transition"
                   >
                     Fork / Publish Baru
                   </button>
                   <button
-                    onClick={handleSubmitPR}
-                    className="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-xs font-semibold text-zinc-950 transition"
+                    disabled={Boolean(compiled.error)}
+                    onClick={() => setShowPRModal(true)}
+                    className="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 disabled:opacity-40 text-xs font-semibold text-zinc-950 transition"
                   >
                     Ajukan Pull Request
                   </button>
@@ -472,7 +473,7 @@ export default function PolyCodeHubApp() {
             <div className="border-b border-white/10 pb-4">
               <h2 className="text-2xl font-bold text-white">Open-Source 3D Pull Requests</h2>
               <p className="text-sm text-zinc-400 mt-1">
-                Bandingkan geometri lama vs geometri baru secara berdampingan (*Side-by-Side 3D Diff*) sebelum menyetujui perubahan kode.
+                Bandingkan geometri lama vs geometri baru secara berdampingan beserta <strong>VS Code Monaco DiffEditor</strong> sebelum menyetujui perubahan.
               </p>
             </div>
 
@@ -508,7 +509,7 @@ export default function PolyCodeHubApp() {
                     onClick={() => setInspectingPR(pr)}
                     className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white text-xs font-semibold shadow-lg shadow-blue-600/25 transition shrink-0"
                   >
-                    Buka 3D Diff & Review
+                    Buka 3D & Code Diff
                   </button>
                 </div>
               );
@@ -516,6 +517,24 @@ export default function PolyCodeHubApp() {
           </div>
         )}
       </main>
+
+      {/* Modals */}
+      {showForkModal && (
+        <ForkPublishModal
+          defaultTitle={selectedAsset.title}
+          defaultCategory={selectedAsset.category}
+          onConfirm={handleConfirmFork}
+          onClose={() => setShowForkModal(false)}
+        />
+      )}
+
+      {showPRModal && (
+        <SubmitPRModal
+          targetAssetTitle={selectedAsset.title}
+          onConfirm={handleConfirmPR}
+          onClose={() => setShowPRModal(false)}
+        />
+      )}
 
       {inspectingPR && (
         <PullRequestModal
