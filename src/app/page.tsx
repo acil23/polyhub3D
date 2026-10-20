@@ -76,8 +76,16 @@ export default function PolyCodeHubApp() {
     fetchAllAssets().then((loaded) => {
       setAssets(loaded);
       if (loaded.length > 0) {
-        setSelectedAsset(loaded[0]);
-        setEditorCode(loaded[0].code);
+        const params = new URLSearchParams(window.location.search);
+        const slugParam = params.get('asset');
+        const matched = slugParam ? loaded.find((a) => a.slug === slugParam) : null;
+        const initial = matched || loaded[0];
+
+        setSelectedAsset(initial);
+        setEditorCode(initial.code);
+        if (matched) {
+          setActiveTab('studio');
+        }
       }
     });
     fetchAllPullRequests().then(setPullRequests);
