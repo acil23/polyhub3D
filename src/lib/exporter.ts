@@ -14,9 +14,6 @@ function triggerDownload(blob: Blob, filename: string) {
   URL.revokeObjectURL(url);
 }
 
-/**
- * Mengekspor ke .OBJ lengkap dengan Watermark Kredit Kreator di dalam header file
- */
 export function exportToOBJ(object3D: THREE.Object3D, asset: Pick<Asset3D, 'slug' | 'title' | 'author_name' | 'author_url' | 'version'>) {
   const clone = object3D.clone(true);
   clone.rotation.set(0, 0, 0);
@@ -40,14 +37,11 @@ export function exportToOBJ(object3D: THREE.Object3D, asset: Pick<Asset3D, 'slug
   triggerDownload(blob, `${asset.slug}.obj`);
 }
 
-/**
- * Mengekspor ke .GLB (glTF 2.0) dengan menanamkan metadata kreator di dalam userData extras
- */
 export function exportToGLB(object3D: THREE.Object3D, asset: Pick<Asset3D, 'slug' | 'title' | 'author_name' | 'author_url' | 'version'>) {
   const clone = object3D.clone(true);
   clone.rotation.set(0, 0, 0);
   clone.userData = {
-    generator: 'PolyCode Hub v0.4.2',
+    generator: 'PolyCode Hub v1.1.0',
     title: asset.title,
     version: asset.version,
     creator: `@${asset.author_name}`,

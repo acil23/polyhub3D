@@ -44,7 +44,7 @@ export function compileProceduralCode(
       const __startMs = performance.now();
       function __guard() {
         if (++__iters > 100000 || (performance.now() - __startMs) > 350) {
-          throw new Error("Execution Timeout: Loop melebihi batas aman (100.000 iterasi atau >350ms).");
+          throw new Error("Execution Timeout: Loop exceeded safety limit (100,000 iterations or >350ms).");
         }
       }
       ${safeCode}
@@ -58,7 +58,7 @@ export function compileProceduralCode(
     const exported = factory(THREE);
 
     if (!exported.createAsset) {
-      throw new Error("Fungsi 'createAsset(THREE, p)' wajib didefinisikan.");
+      throw new Error("Function 'createAsset(THREE, p)' must be defined.");
     }
 
     const schema: ParamSchema = exported.params || {};
@@ -73,7 +73,7 @@ export function compileProceduralCode(
 
     const resultGroup = exported.createAsset(THREE, resolvedValues);
     if (!(resultGroup instanceof THREE.Object3D)) {
-      throw new Error("createAsset() harus mengembalikan instance THREE.Group atau THREE.Mesh.");
+      throw new Error("createAsset() must return a THREE.Group or THREE.Mesh instance.");
     }
 
     let group: THREE.Group;
@@ -101,7 +101,7 @@ export function compileProceduralCode(
     });
 
     if (vertices > 250000) {
-      throw new Error(`Mesh terlalu padat (${vertices} vertices). Batas maksimum adalah 250.000 vertices.`);
+      throw new Error(`Mesh is too dense (${vertices} vertices). Maximum limit is 250,000 vertices.`);
     }
 
     const compileTimeMs = Math.round((performance.now() - start) * 10) / 10;

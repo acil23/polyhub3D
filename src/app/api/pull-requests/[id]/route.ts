@@ -17,7 +17,7 @@ export async function PATCH(
     const expectedPin = (process.env.ADMIN_MERGE_PIN || 'admin123').trim();
     if (!admin_pin || String(admin_pin).trim() !== expectedPin) {
       return NextResponse.json(
-        { error: 'Akses Ditolak: PIN Owner tidak valid! Hanya Owner yang dapat menyetujui atau menolak Pull Request.' },
+        { error: 'Access Denied: Invalid Owner PIN! Only the Owner can approve or reject Pull Requests.' },
         { status: 401 }
       );
     }

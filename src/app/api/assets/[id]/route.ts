@@ -16,7 +16,7 @@ export async function PATCH(
     const expectedPin = (process.env.ADMIN_MERGE_PIN || 'admin123').trim();
     if (!admin_pin || String(admin_pin).trim() !== expectedPin) {
       return NextResponse.json(
-        { error: 'Akses Ditolak: PIN Owner tidak valid!' },
+        { error: 'Access Denied: Invalid Owner PIN!' },
         { status: 401 }
       );
     }
@@ -58,9 +58,7 @@ export async function PATCH(
             status: 'rejected',
             authorUrl: meta.authorUrl
           });
-          // Soft-delete terlebih dahulu agar tetap hilang meskipun RLS DELETE belum diaktifkan
           await supabase.from('assets').update({ code: rejectedCode }).eq('id', assetId);
-          // Lalu coba hard-delete
           await supabase.from('assets').delete().eq('id', assetId);
         }
       }

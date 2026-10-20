@@ -5,10 +5,12 @@ import { DiffEditor } from '@monaco-editor/react';
 import Viewport3D from './Viewport3D';
 import { compileProceduralCode } from '@/lib/compiler';
 import { Asset3D, PullRequest3D } from '@/types/polycode';
+import { DICT, Language } from '@/lib/i18n';
 
 interface PullRequestModalProps {
   pr: PullRequest3D;
   baseAsset: Asset3D;
+  lang: Language;
   onMerge: (pr: PullRequest3D, adminPin: string) => Promise<void>;
   onReject: (prId: string, adminPin: string) => Promise<void>;
   onClose: () => void;
@@ -17,10 +19,12 @@ interface PullRequestModalProps {
 export default function PullRequestModal({
   pr,
   baseAsset,
+  lang,
   onMerge,
   onReject,
   onClose
 }: PullRequestModalProps) {
+  const t = DICT[lang].diffModal;
   const [adminPin, setAdminPin] = useState('');
   const [authError, setAuthError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -33,7 +37,7 @@ export default function PullRequestModal({
 
   const handleAction = async (type: 'merge' | 'reject') => {
     if (!adminPin.trim()) {
-      setAuthError('Masukkan PIN Owner terlebih dahulu untuk memproses Pull Request ini.');
+      setAuthError(t.pinRequiredError);
       return;
     }
     setAuthError(null);
@@ -45,7 +49,7 @@ export default function PullRequestModal({
         await onReject(pr.id, adminPin.trim());
       }
     } catch (err: any) {
-      setAuthError(err?.message || 'PIN Owner salah atau terjadi kesalahan server.');
+      setAuthError(err?.message || 'Invalid Owner PIN or server error.');
     } finally {
       setIsSubmitting(false);
     }
@@ -58,7 +62,7 @@ export default function PullRequestModal({
           <div>
             <div className="flex items-center gap-2">
               <span className="text-xs px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30 font-semibold">
-                Visual 3D & Monaco Diff Review #{pr.id}
+                {t.reviewBadge} #{pr.id}
               </span>
               <span className="text-xs font-mono text-zinc-400">
                 Delta: {vertDiff >= 0 ? `+${vertDiff}` : vertDiff} verts / {triDiff >= 0 ? `+${triDiff}` : triDiff} tris
@@ -66,7 +70,7 @@ export default function PullRequestModal({
             </div>
             <h2 className="text-lg font-bold text-white mt-1">{pr.title}</h2>
             <p className="text-xs text-zinc-400">
-              Diajukan oleh <strong className="text-zinc-200">@{pr.author_name}</strong> untuk memperbarui{' '}
+              {t.submittedBy} <strong className="text-zinc-200">@{pr.author_name}</strong> {t.toUpdate}{' '}
               <strong className="text-blue-400">{baseAsset.title} (v{baseAsset.version})</strong>
             </p>
           </div>
@@ -74,7 +78,7 @@ export default function PullRequestModal({
             onClick={onClose}
             className="text-zinc-400 hover:text-white text-sm px-3.5 py-1.5 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl transition"
           >
-            Tutup ✕
+            {t.close}
           </button>
         </div>
 
@@ -86,7 +90,7 @@ export default function PullRequestModal({
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="border border-white/10 rounded-2xl p-3 bg-zinc-900/40">
               <div className="flex justify-between text-xs mb-2">
-                <span className="font-bold text-zinc-400">BASE MODEL (v{baseAsset.version})</span>
+                <span className="font-bold text-zinc-400">{t.baseModel} (v{baseAsset.version})</span>
                 <span className="font-mono text-zinc-400">
                   {baseCompiled.stats.vertices} verts • {baseCompiled.stats.triangles} tris
                 </span>
@@ -98,7 +102,7 @@ export default function PullRequestModal({
 
             <div className="border border-emerald-500/40 rounded-2xl p-3 bg-emerald-950/15">
               <div className="flex justify-between text-xs mb-2">
-                <span className="font-bold text-emerald-400">PROPOSED PR UPDATE</span>
+                <span className="font-bold text-emerald-400">{t.proposedUpdate}</span>
                 <span className="font-mono text-emerald-300">
                   {proposedCompiled.stats.vertices} verts • {proposedCompiled.stats.triangles} tris
                 </span>
@@ -111,8 +115,8 @@ export default function PullRequestModal({
 
           <div className="border border-white/15 rounded-2xl overflow-hidden bg-zinc-900/60">
             <div className="px-4 py-2 border-b border-white/10 flex items-center justify-between text-xs text-zinc-400 bg-zinc-950/80">
-              <span className="font-semibold text-zinc-200">Monaco Side-by-Side Code Diff Inspector</span>
-              <span className="font-mono text-[11px]">Merah: Kode Lama • Hijau: Usulan PR</span>
+              <span className="font-semibold text-zinc-200">{t.diffHeader}</span>
+              <span className="font-mono text-[11px]">{t.diffLegend}</span>
             </div>
             <div className="h-72 w-full">
               <DiffEditor
@@ -145,13 +149,13 @@ export default function PullRequestModal({
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
               <div className="flex items-center gap-2.5 flex-1 max-w-md">
                 <span className="text-xs font-semibold text-amber-300 whitespace-nowrap">
-                  🔒 Owner PIN:
+                  {t.ownerPin}
                 </span>
                 <input
                   type="password"
                   value={adminPin}
                   onChange={(e) => setAdminPin(e.target.value)}
-                  placeholder="Masukkan ADMIN_MERGE_PIN..."
+                  placeholder={t.pinPlaceholder}
                   className="w-full bg-zinc-950 border border-white/15 focus:border-amber-500 rounded-xl px-3.5 py-2 text-xs text-white placeholder-zinc-500 outline-none"
                 />
               </div>
@@ -162,14 +166,14 @@ export default function PullRequestModal({
                   onClick={() => handleAction('reject')}
                   className="px-4 py-2 rounded-xl bg-red-500/15 text-red-300 border border-red-500/30 hover:bg-red-500/25 disabled:opacity-40 text-xs sm:text-sm font-medium transition"
                 >
-                  Tolak PR
+                  {t.rejectBtn}
                 </button>
                 <button
                   disabled={Boolean(proposedCompiled.error) || isSubmitting}
                   onClick={() => handleAction('merge')}
                   className="px-5 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-500 hover:to-teal-400 disabled:opacity-40 text-white text-xs sm:text-sm font-semibold shadow-lg shadow-emerald-600/30 transition"
                 >
-                  {isSubmitting ? 'Memverifikasi...' : 'Approve & Merge ke Katalog Utama'}
+                  {isSubmitting ? t.verifying : t.mergeBtn}
                 </button>
               </div>
             </div>

@@ -73,9 +73,6 @@ export function hydrateAssetRow(row: any): Asset3D {
   };
 }
 
-/**
- * Menormalisasi kode 3D (menghapus komentar & spasi) untuk mendeteksi duplikat 100%
- */
 export function normalizeCodeSignature(code: string): string {
   const { cleanCode } = extractAssetMeta(code, '');
   return cleanCode

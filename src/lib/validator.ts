@@ -18,19 +18,19 @@ const FORBIDDEN_PATTERNS: { pattern: RegExp; name: string }[] = [
 
 export function validateProceduralScript(code: string): { valid: boolean; reason?: string } {
   if (!code || typeof code !== 'string') {
-    return { valid: false, reason: 'Kode skrip 3D tidak boleh kosong.' };
+    return { valid: false, reason: '3D script code cannot be empty.' };
   }
   if (code.length > 50000) {
-    return { valid: false, reason: 'Ukuran skrip melebihi batas maksimum 50 KB.' };
+    return { valid: false, reason: 'Script size exceeds the 50 KB maximum limit.' };
   }
   if (!/function\s+createAsset\s*\(/.test(code)) {
-    return { valid: false, reason: "Skrip wajib memiliki fungsi 'createAsset(THREE, p)'." };
+    return { valid: false, reason: "Script must define a 'createAsset(THREE, p)' function." };
   }
   for (const rule of FORBIDDEN_PATTERNS) {
     if (rule.pattern.test(code)) {
       return {
         valid: false,
-        reason: `Security Sandbox Violation: Penggunaan API '${rule.name}' dilarang.`
+        reason: `Security Sandbox Violation: Usage of '${rule.name}' is forbidden inside 3D scripts.`
       };
     }
   }

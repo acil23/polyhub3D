@@ -1,8 +1,8 @@
 import { INITIAL_ASSETS, INITIAL_PULL_REQUESTS } from './seedData';
 import { Asset3D, PullRequest3D } from '@/types/polycode';
 
-const LS_ASSETS_KEY = 'polycode_hub_assets_v042';
-const LS_PRS_KEY = 'polycode_hub_prs_v042';
+const LS_ASSETS_KEY = 'polycode_hub_assets_v110';
+const LS_PRS_KEY = 'polycode_hub_prs_v110';
 
 export interface BackendStatus {
   connected: boolean;
@@ -18,7 +18,7 @@ export async function checkBackendHealth(): Promise<BackendStatus> {
     return {
       connected: false,
       mode: 'local_fallback',
-      message: 'Berjalan dalam Local Hybrid Mode.'
+      message: 'Running in Local Hybrid Mode.'
     };
   }
 }
@@ -65,7 +65,7 @@ export async function saveNewAsset(
   });
   const data = await res.json();
   if (!res.ok) {
-    throw new Error(data.error || 'Gagal menyimpan aset 3D');
+    throw new Error(data.error || 'Failed to publish 3D asset');
   }
 
   const created: Asset3D = data.asset;
@@ -89,7 +89,7 @@ export async function moderateAssetRepo(
   });
   const data = await res.json();
   if (!res.ok) {
-    throw new Error(data.error || 'Gagal memproses moderasi aset');
+    throw new Error(data.error || 'Failed to process moderation action');
   }
 
   const updated =
@@ -147,7 +147,7 @@ export async function createNewPullRequest(
   });
   const data = await res.json();
   if (!res.ok) {
-    throw new Error(data.error || 'Gagal mengirim Pull Request');
+    throw new Error(data.error || 'Failed to submit Pull Request');
   }
 
   const created: PullRequest3D = data.pullRequest;
@@ -179,7 +179,7 @@ export async function mergePullRequestRepo(
   });
   const data = await res.json();
   if (!res.ok) {
-    throw new Error(data.error || 'Gagal melakukan Merge PR');
+    throw new Error(data.error || 'Failed to Merge PR');
   }
 
   const updatedAssets = currentAssets.map((a) =>
@@ -209,7 +209,7 @@ export async function rejectPullRequestRepo(
   });
   const data = await res.json();
   if (!res.ok) {
-    throw new Error(data.error || 'Gagal menolak Pull Request');
+    throw new Error(data.error || 'Failed to reject Pull Request');
   }
 
   const updatedPRs = currentPRs.map((item) =>

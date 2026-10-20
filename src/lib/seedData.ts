@@ -13,11 +13,11 @@ export const INITIAL_ASSETS: Asset3D[] = [
     downloads: 842,
     created_at: '2026-10-18T10:00:00Z',
     code: `const params = {
-  tiers: { type: 'number', label: 'Jumlah Tingkat Daun', default: 5, min: 2, max: 8, step: 1 },
-  height: { type: 'number', label: 'Tinggi Pohon', default: 3.4, min: 1.5, max: 5.5, step: 0.2 },
-  radius: { type: 'number', label: 'Lebar Kanopi', default: 1.35, min: 0.6, max: 2.5, step: 0.05 },
-  leafColor: { type: 'color', label: 'Warna Daun', default: '#10b981' },
-  trunkColor: { type: 'color', label: 'Warna Batang', default: '#78350f' }
+  tiers: { type: 'number', label: 'Foliage Tiers', default: 5, min: 2, max: 8, step: 1 },
+  height: { type: 'number', label: 'Tree Height', default: 3.4, min: 1.5, max: 5.5, step: 0.2 },
+  radius: { type: 'number', label: 'Canopy Radius', default: 1.35, min: 0.6, max: 2.5, step: 0.05 },
+  leafColor: { type: 'color', label: 'Foliage Color', default: '#10b981' },
+  trunkColor: { type: 'color', label: 'Trunk Color', default: '#78350f' }
 };
 
 function createAsset(THREE, p) {
@@ -57,10 +57,10 @@ function createAsset(THREE, p) {
     downloads: 619,
     created_at: '2026-10-19T08:30:00Z',
     code: `const params = {
-  size: { type: 'number', label: 'Ukuran Kontainer', default: 1.75, min: 1.0, max: 2.8, step: 0.05 },
-  bevel: { type: 'number', label: 'Tebal Rangka Baja', default: 0.18, min: 0.06, max: 0.35, step: 0.01 },
-  bodyColor: { type: 'color', label: 'Warna Armor Baja', default: '#334155' },
-  glowColor: { type: 'color', label: 'Warna Inti Plasma', default: '#06b6d4' }
+  size: { type: 'number', label: 'Reactor Size', default: 1.75, min: 1.0, max: 2.8, step: 0.05 },
+  bevel: { type: 'number', label: 'Steel Frame Thickness', default: 0.18, min: 0.06, max: 0.35, step: 0.01 },
+  bodyColor: { type: 'color', label: 'Steel Armor Color', default: '#334155' },
+  glowColor: { type: 'color', label: 'Plasma Core Glow', default: '#06b6d4' }
 };
 
 function createAsset(THREE, p) {
@@ -114,12 +114,12 @@ function createAsset(THREE, p) {
     downloads: 1290,
     created_at: '2026-10-19T14:20:00Z',
     code: `const params = {
-  bladeLength: { type: 'number', label: 'Panjang Bilah', default: 2.5, min: 1.4, max: 3.6, step: 0.1 },
-  bladeWidth: { type: 'number', label: 'Lebar Bilah', default: 0.32, min: 0.16, max: 0.6, step: 0.02 },
-  guardWidth: { type: 'number', label: 'Lebar Crossguard', default: 1.25, min: 0.6, max: 2.0, step: 0.05 },
-  bladeColor: { type: 'color', label: 'Warna Baja Bilah', default: '#e2e8f0' },
-  hiltColor: { type: 'color', label: 'Warna Emas Guard', default: '#f59e0b' },
-  gemColor: { type: 'color', label: 'Warna Permata Rune', default: '#3b82f6' }
+  bladeLength: { type: 'number', label: 'Blade Length', default: 2.5, min: 1.4, max: 3.6, step: 0.1 },
+  bladeWidth: { type: 'number', label: 'Blade Width', default: 0.32, min: 0.16, max: 0.6, step: 0.02 },
+  guardWidth: { type: 'number', label: 'Crossguard Width', default: 1.25, min: 0.6, max: 2.0, step: 0.05 },
+  bladeColor: { type: 'color', label: 'Blade Steel Color', default: '#e2e8f0' },
+  hiltColor: { type: 'color', label: 'Hilt Gold Color', default: '#f59e0b' },
+  gemColor: { type: 'color', label: 'Rune Gem Color', default: '#3b82f6' }
 };
 
 function createAsset(THREE, p) {
@@ -172,10 +172,10 @@ function createAsset(THREE, p) {
     downloads: 530,
     created_at: '2026-10-19T18:10:00Z',
     code: `const params = {
-  floors: { type: 'number', label: 'Tingkat Menara', default: 5, min: 2, max: 9, step: 1 },
-  baseWidth: { type: 'number', label: 'Lebar Pondasi', default: 1.8, min: 1.0, max: 2.8, step: 0.1 },
-  wallColor: { type: 'color', label: 'Warna Fasad Beton', default: '#334155' },
-  neonColor: { type: 'color', label: 'Warna Sabuk Neon', default: '#a855f7' }
+  floors: { type: 'number', label: 'Tower Floors', default: 5, min: 2, max: 9, step: 1 },
+  baseWidth: { type: 'number', label: 'Base Foundation Width', default: 1.8, min: 1.0, max: 2.8, step: 0.1 },
+  wallColor: { type: 'color', label: 'Concrete Facade Color', default: '#334155' },
+  neonColor: { type: 'color', label: 'Neon Belt Glow', default: '#a855f7' }
 };
 
 function createAsset(THREE, p) {
@@ -218,11 +218,11 @@ function createAsset(THREE, p) {
     downloads: 715,
     created_at: '2026-10-19T20:45:00Z',
     code: `const params = {
-  shards: { type: 'number', label: 'Jumlah Kristal', default: 7, min: 3, max: 14, step: 1 },
-  height: { type: 'number', label: 'Tinggi Puncak Utama', default: 2.6, min: 1.5, max: 4.0, step: 0.1 },
-  spread: { type: 'number', label: 'Radius Sebaran', default: 0.75, min: 0.3, max: 1.5, step: 0.05 },
-  crystalColor: { type: 'color', label: 'Warna Kristal', default: '#8b5cf6' },
-  coreGlow: { type: 'color', label: 'Pendaran Energi', default: '#38bdf8' }
+  shards: { type: 'number', label: 'Crystal Shards', default: 7, min: 3, max: 14, step: 1 },
+  height: { type: 'number', label: 'Main Spire Height', default: 2.6, min: 1.5, max: 4.0, step: 0.1 },
+  spread: { type: 'number', label: 'Cluster Spread Radius', default: 0.75, min: 0.3, max: 1.5, step: 0.05 },
+  crystalColor: { type: 'color', label: 'Crystal Color', default: '#8b5cf6' },
+  coreGlow: { type: 'color', label: 'Energy Emission Glow', default: '#38bdf8' }
 };
 
 function createAsset(THREE, p) {
@@ -268,10 +268,10 @@ function createAsset(THREE, p) {
     downloads: 490,
     created_at: '2026-10-20T01:00:00Z',
     code: `const params = {
-  coreRadius: { type: 'number', label: 'Radius Inti Drone', default: 0.85, min: 0.5, max: 1.5, step: 0.05 },
-  ringSize: { type: 'number', label: 'Radius Cincin Gyro', default: 1.45, min: 1.0, max: 2.4, step: 0.05 },
-  hullColor: { type: 'color', label: 'Warna Pelindung', default: '#f8fafc' },
-  eyeColor: { type: 'color', label: 'Warna Sensor Optik', default: '#f43f5e' }
+  coreRadius: { type: 'number', label: 'Drone Core Radius', default: 0.85, min: 0.5, max: 1.5, step: 0.05 },
+  ringSize: { type: 'number', label: 'Gyro Ring Radius', default: 1.45, min: 1.0, max: 2.4, step: 0.05 },
+  hullColor: { type: 'color', label: 'Hull Armor Color', default: '#f8fafc' },
+  eyeColor: { type: 'color', label: 'Optic Sensor Glow', default: '#f43f5e' }
 };
 
 function createAsset(THREE, p) {
@@ -309,16 +309,16 @@ export const INITIAL_PULL_REQUESTS: PullRequest3D[] = [
     asset_title: 'Low-Poly Pine Tree',
     author_name: 'maya_3d',
     author_url: 'https://github.com/maya_3d',
-    title: 'Tambah Variasi Rotasi Spiral & Kanopi Rapat',
-    description: 'Mengatur rotasi spiral antar tingkat daun serta menaikkan jumlah tingkat default agar siluet low-poly lebih penuh dari segala sudut kamera.',
+    title: 'Add Spiral Foliage Rotation & Denser Canopy Tiers',
+    description: 'Adjusted spiral rotation between foliage tiers and increased default tier count from 5 to 6 for a fuller low-poly silhouette from all camera angles.',
     status: 'open',
     created_at: '2026-10-20T01:15:00Z',
     proposed_code: `const params = {
-  tiers: { type: 'number', label: 'Jumlah Tingkat Daun', default: 6, min: 2, max: 8, step: 1 },
-  height: { type: 'number', label: 'Tinggi Pohon', default: 3.8, min: 1.5, max: 6.0, step: 0.2 },
-  radius: { type: 'number', label: 'Lebar Kanopi', default: 1.45, min: 0.6, max: 2.5, step: 0.1 },
-  leafColor: { type: 'color', label: 'Warna Daun', default: '#34d399' },
-  trunkColor: { type: 'color', label: 'Warna Batang', default: '#78350f' }
+  tiers: { type: 'number', label: 'Foliage Tiers', default: 6, min: 2, max: 8, step: 1 },
+  height: { type: 'number', label: 'Tree Height', default: 3.8, min: 1.5, max: 6.0, step: 0.2 },
+  radius: { type: 'number', label: 'Canopy Radius', default: 1.45, min: 0.6, max: 2.5, step: 0.1 },
+  leafColor: { type: 'color', label: 'Foliage Color', default: '#34d399' },
+  trunkColor: { type: 'color', label: 'Trunk Color', default: '#78350f' }
 };
 
 function createAsset(THREE, p) {

@@ -8,7 +8,7 @@ export async function GET() {
     return NextResponse.json({
       connected: false,
       mode: 'local_fallback',
-      message: 'Kredensial Supabase belum terdeteksi.'
+      message: 'Supabase credentials not configured.'
     });
   }
 
@@ -17,13 +17,13 @@ export async function GET() {
     return NextResponse.json({
       connected: false,
       mode: 'schema_missing',
-      message: `Terkoneksi ke Supabase, namun tabel belum dibuat (${error.message}). Jalankan SQL Migration di SQL Editor.`
+      message: `Connected to Supabase, but schema tables are missing (${error.message}). Run SQL Migration in SQL Editor.`
     });
   }
 
   return NextResponse.json({
     connected: true,
     mode: 'supabase_cloud',
-    message: 'Terhubung penuh ke PostgreSQL Supabase Cloud!'
+    message: 'Connected to Supabase PostgreSQL Cloud!'
   });
 }

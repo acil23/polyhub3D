@@ -37,7 +37,7 @@ export async function POST(request: Request) {
     const rate = checkRateLimit(`pr-${clientIp}`, 4, 10 * 60 * 1000);
     if (!rate.allowed) {
       return NextResponse.json(
-        { error: `Anti-Spam Cooldown: Tunggu ${rate.retryAfterSec} detik sebelum mengirim PR baru.` },
+        { error: `Anti-Spam Cooldown: Please wait ${rate.retryAfterSec} seconds before submitting another PR.` },
         { status: 429 }
       );
     }

@@ -53,33 +53,29 @@ export async function POST(request: Request) {
     const expectedPin = (process.env.ADMIN_MERGE_PIN || 'admin123').trim();
     const isOwnerFastTrack = Boolean(admin_pin && String(admin_pin).trim() === expectedPin);
 
-    // 1. Jika user mengisi Owner PIN tapi salah, tolak langsung
     if (admin_pin && String(admin_pin).trim() !== '' && !isOwnerFastTrack) {
       return NextResponse.json(
-        { error: 'PIN Owner salah! Kosongkan kolom PIN jika Anda ingin mempublikasikan sebagai Kontributor Komunitas.' },
+        { error: 'Invalid Owner PIN! Leave the PIN field blank to publish as a Community Contributor.' },
         { status: 401 }
       );
     }
 
-    // 2. IP Rate Limiting untuk pengunjung publik (Maks 3 upload per 10 menit)
     const clientIp = request.headers.get('x-forwarded-for') || 'local-ip';
     if (!isOwnerFastTrack) {
       const rate = checkRateLimit(clientIp, 3, 10 * 60 * 1000);
       if (!rate.allowed) {
         return NextResponse.json(
-          { error: `Anti-Spam Cooldown: Terlalu banyak kiriman dalam waktu singkat. Coba lagi dalam ${rate.retryAfterSec} detik.` },
+          { error: `Anti-Spam Cooldown: Too many submissions in a short period. Please retry in ${rate.retryAfterSec} seconds.` },
           { status: 429 }
         );
       }
     }
 
-    // 3. Validasi Keamanan Skrip 3D
     const validation = validateProceduralScript(code);
     if (!validation.valid) {
       return NextResponse.json({ error: validation.reason }, { status: 400 });
     }
 
-    // 4. Anti-Duplicate Code Check (Mencegah Fork kosong tanpa modifikasi geometri)
     const incomingSig = normalizeCodeSignature(code);
     let existingList = INITIAL_ASSETS;
     if (isSupabaseConfigured && supabase) {
@@ -92,7 +88,7 @@ export async function POST(request: Request) {
     if (duplicate) {
       return NextResponse.json(
         {
-          error: `Duplikat Terdeteksi: Kode geometri 3D ini 100% identik dengan aset "${duplicate.title}". Silakan modifikasi bentuk atau parameter 3D terlebih dahulu sebelum mempublikasikan Fork!`
+          error: `Duplicate Detected: This 3D geometry code is 100% identical to "${duplicate.title}". Please modify the 3D geometry or parameters before publishing a Fork!`
         },
         { status: 400 }
       );
