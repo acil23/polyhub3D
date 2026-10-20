@@ -20,10 +20,6 @@ function getSharedSnapshotRenderer(): THREE.WebGLRenderer | null {
   return sharedRenderer;
 }
 
-/**
- * Merender model 3D satu kali menggunakan Singleton Offscreen WebGLRenderer
- * menjadi gambar DataURL (.webp) ringan agar halaman katalog bebas dari batas WebGL Context!
- */
 export function getOrCreateAssetThumbnail(cacheKey: string, modelGroup: THREE.Group | null): string | null {
   if (typeof window === 'undefined' || !modelGroup) return null;
   if (snapshotCache.has(cacheKey)) {
@@ -38,7 +34,6 @@ export function getOrCreateAssetThumbnail(cacheKey: string, modelGroup: THREE.Gr
   camera.position.set(3.7, 2.6, 4.3);
   camera.lookAt(0, 0.1, 0);
 
-  // Studio 4-Point Lighting
   scene.add(new THREE.HemisphereLight(0xffffff, 0x1e1b4b, 1.15));
   const keyLight = new THREE.DirectionalLight(0xffffff, 2.5);
   keyLight.position.set(5, 9, 6);
@@ -52,7 +47,6 @@ export function getOrCreateAssetThumbnail(cacheKey: string, modelGroup: THREE.Gr
   rim2.position.set(4, -5, -4);
   scene.add(rim2);
 
-  // Subtle Polar Pedestal
   const polarGrid = new THREE.PolarGridHelper(4.2, 12, 5, 48, 0x3b82f6, 0x27272a);
   polarGrid.position.y = -1.15;
   scene.add(polarGrid);

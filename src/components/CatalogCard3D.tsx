@@ -12,12 +12,6 @@ interface CatalogCard3DProps {
   onQuickExport: (e: React.MouseEvent, asset: Asset3D, format: 'obj' | 'glb') => void;
 }
 
-/**
- * Komponen Kartu Katalog Cerdas dengan WebGL Context Limiter:
- * - Secara default menampilkan Auto-Snapshot .WEBP beresolusi tinggi (0 WebGL context aktif).
- * - Ketika kursor melakukan hover pada area 3D, barulah <Viewport3D /> interaktif di-mount.
- * - Mencegah error "Too many active WebGL contexts" meskipun katalog memuat 100+ aset!
- */
 export default function CatalogCard3D({ asset, onSelect, onQuickExport }: CatalogCard3DProps) {
   const [isHovered, setIsHovered] = useState(false);
   const [thumbnailUrl, setThumbnailUrl] = useState<string | null>(null);
@@ -35,7 +29,6 @@ export default function CatalogCard3D({ asset, onSelect, onQuickExport }: Catalo
       onMouseLeave={() => setIsHovered(false)}
       className="group relative rounded-3xl border border-white/10 hover:border-blue-500/60 bg-zinc-900/50 backdrop-blur-md overflow-hidden flex flex-col transition-all duration-300 hover:shadow-[0_20px_50px_rgba(37,99,235,0.22)]"
     >
-      {/* 3D Preview Container */}
       <div className="h-64 w-full relative overflow-hidden z-0 border-b border-white/10">
         {isHovered ? (
           <Viewport3D modelGroup={preview.group} autoRotate={true} showGrid={true} />
@@ -59,7 +52,6 @@ export default function CatalogCard3D({ asset, onSelect, onQuickExport }: Catalo
           </div>
         )}
 
-        {/* Top Badges */}
         <div className="absolute top-3.5 left-3.5 right-3.5 flex items-center justify-between pointer-events-none z-10">
           <span className="text-[11px] font-semibold bg-zinc-950/85 backdrop-blur-md border border-white/15 px-3 py-1 rounded-full text-zinc-200">
             {asset.category}
@@ -69,7 +61,6 @@ export default function CatalogCard3D({ asset, onSelect, onQuickExport }: Catalo
           </span>
         </div>
 
-        {/* Bottom Telemetry & WebGL Status Pill */}
         <div className="absolute bottom-3 left-3.5 right-3.5 flex items-center justify-between pointer-events-none z-10">
           <span className="text-[10px] font-mono bg-black/75 backdrop-blur px-2.5 py-1 rounded-lg text-zinc-300 border border-white/10">
             {preview.stats.vertices} Verts • {preview.stats.triangles} Tris
@@ -86,7 +77,6 @@ export default function CatalogCard3D({ asset, onSelect, onQuickExport }: Catalo
         </div>
       </div>
 
-      {/* Card Footer */}
       <div className="p-5 bg-zinc-950/95 relative z-10 flex-1 flex flex-col justify-between space-y-4">
         <div>
           <div className="flex items-center justify-between gap-2">

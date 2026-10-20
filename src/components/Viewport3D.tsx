@@ -53,7 +53,6 @@ export default function Viewport3D({
     controls.autoRotateSpeed = 1.8;
     controlsRef.current = controls;
 
-    // Studio 4-Point Lighting System
     const hemiLight = new THREE.HemisphereLight(0xffffff, 0x1e1b4b, 1.1);
     scene.add(hemiLight);
 
@@ -72,7 +71,6 @@ export default function Viewport3D({
 
     lightsRef.current = { rim1: rimLight1, rim2: rimLight2 };
 
-    // Luxury Studio Pedestal & Polar Grid
     const stageGroup = new THREE.Group();
     const polarGrid = new THREE.PolarGridHelper(4.5, 12, 6, 64, 0x3b82f6, 0x27272a);
     polarGrid.position.y = -1.15;

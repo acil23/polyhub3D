@@ -10,15 +10,15 @@ import { ForkPublishModal, SubmitPRModal } from '@/components/ActionModals';
 import { INITIAL_ASSETS, INITIAL_PULL_REQUESTS } from '@/lib/seedData';
 import { compileProceduralCode } from '@/lib/compiler';
 import { exportToOBJ, exportToGLB } from '@/lib/exporter';
-import { isSupabaseConfigured } from '@/lib/supabase';
 import {
+  checkBackendHealth,
+  BackendStatus,
   fetchAllAssets,
   fetchAllPullRequests,
   saveNewAsset,
   createNewPullRequest,
   mergePullRequestRepo,
-  rejectPullRequestRepo,
-  resetLocalDemoData
+  rejectPullRequestRepo
 } from '@/lib/repository';
 import { Asset3D, AssetCategory, PullRequest3D, ParamValues } from '@/types/polycode';
 
@@ -28,6 +28,11 @@ export default function PolyCodeHubApp() {
   const [activeTab, setActiveTab] = useState<'explore' | 'studio' | 'prs'>('explore');
   const [assets, setAssets] = useState<Asset3D[]>(INITIAL_ASSETS);
   const [pullRequests, setPullRequests] = useState<PullRequest3D[]>(INITIAL_PULL_REQUESTS);
+  const [dbHealth, setDbHealth] = useState<BackendStatus>({
+    connected: false,
+    mode: 'local_fallback',
+    message: 'Memeriksa koneksi API & Supabase...'
+  });
 
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
   const [searchQuery, setSearchQuery] = useState<string>('');
@@ -48,10 +53,11 @@ export default function PolyCodeHubApp() {
 
   const triggerToast = (msg: string) => {
     setToastMsg(msg);
-    setTimeout(() => setToastMsg(null), 3800);
+    setTimeout(() => setToastMsg(null), 4200);
   };
 
   useEffect(() => {
+    checkBackendHealth().then(setDbHealth);
     fetchAllAssets().then((loaded) => {
       setAssets(loaded);
       if (loaded.length > 0) {
@@ -98,24 +104,25 @@ export default function PolyCodeHubApp() {
     category: AssetCategory;
     authorName: string;
   }) => {
-    const newAsset: Asset3D = {
-      id: `asset-${Date.now()}`,
-      slug: data.title.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
-      title: data.title,
-      category: data.category,
-      author_name: data.authorName,
-      version: '1.0.0',
-      code: editorCode,
-      downloads: 1,
-      forked_from: selectedAsset.id,
-      created_at: new Date().toISOString()
-    };
-    const updated = await saveNewAsset(newAsset, assets);
-    setAssets(updated);
-    setSelectedAsset(newAsset);
-    setShowForkModal(false);
-    setActiveTab('explore');
-    triggerToast(`Aset "${newAsset.title}" berhasil diterbitkan ke Katalog!`);
+    try {
+      const { assets: updated, created } = await saveNewAsset(
+        {
+          title: data.title,
+          category: data.category,
+          author_name: data.authorName,
+          code: editorCode,
+          forked_from: selectedAsset.id
+        },
+        assets
+      );
+      setAssets(updated);
+      setSelectedAsset(created);
+      setShowForkModal(false);
+      setActiveTab('explore');
+      triggerToast(`Aset "${created.title}" berhasil disimpan ke Supabase Cloud!`);
+    } catch (err: any) {
+      triggerToast(`Gagal: ${err.message}`);
+    }
   };
 
   const handleConfirmPR = async (data: {
@@ -123,60 +130,53 @@ export default function PolyCodeHubApp() {
     description: string;
     authorName: string;
   }) => {
-    const newPR: PullRequest3D = {
-      id: `pr-${Date.now().toString().slice(-3)}`,
-      asset_id: selectedAsset.id,
-      asset_title: selectedAsset.title,
-      author_name: data.authorName,
-      title: data.title,
-      description: data.description,
-      proposed_code: editorCode,
-      status: 'open',
-      created_at: new Date().toISOString()
-    };
-    const updated = await createNewPullRequest(newPR, pullRequests);
-    setPullRequests(updated);
-    setShowPRModal(false);
-    setActiveTab('prs');
-    triggerToast(`Pull Request #${newPR.id} berhasil diajukan!`);
+    try {
+      const { prs: updated, created } = await createNewPullRequest(
+        {
+          asset_id: selectedAsset.id,
+          asset_title: selectedAsset.title,
+          author_name: data.authorName,
+          title: data.title,
+          description: data.description,
+          proposed_code: editorCode
+        },
+        pullRequests
+      );
+      setPullRequests(updated);
+      setShowPRModal(false);
+      setActiveTab('prs');
+      triggerToast(`Pull Request #${created.id} berhasil diajukan!`);
+    } catch (err: any) {
+      triggerToast(`Gagal: ${err.message}`);
+    }
   };
 
-  const handleMergePR = async (pr: PullRequest3D) => {
+  const handleMergePR = async (pr: PullRequest3D, adminPin: string) => {
     const { assets: updatedAssets, prs: updatedPRs } = await mergePullRequestRepo(
       pr,
+      adminPin,
       assets,
       pullRequests
     );
     setAssets(updatedAssets);
     setPullRequests(updatedPRs);
     setInspectingPR(null);
-    triggerToast(`PR #${pr.id} berhasil di-merge! Versi model telah diperbarui.`);
+    triggerToast(`PR #${pr.id} berhasil di-merge oleh Owner!`);
   };
 
-  const handleRejectPR = async (prId: string) => {
-    const updatedPRs = await rejectPullRequestRepo(prId, pullRequests);
+  const handleRejectPR = async (prId: string, adminPin: string) => {
+    const updatedPRs = await rejectPullRequestRepo(prId, adminPin, pullRequests);
     setPullRequests(updatedPRs);
     setInspectingPR(null);
-    triggerToast(`Pull Request #${prId} ditolak.`);
-  };
-
-  const handleResetDemo = () => {
-    const { assets: resetA, prs: resetP } = resetLocalDemoData();
-    setAssets(resetA);
-    setPullRequests(resetP);
-    setSelectedAsset(resetA[0]);
-    setEditorCode(resetA[0].code);
-    triggerToast('Data katalog di-reset ke kondisi awal v0.3.0.');
+    triggerToast(`Pull Request #${prId} ditolak oleh Owner.`);
   };
 
   return (
     <div className="min-h-screen flex flex-col bg-[#050508] text-zinc-100 relative overflow-hidden">
-      {/* Luxury Ambient Background Glows */}
       <div className="pointer-events-none fixed -top-40 left-1/4 w-[600px] h-[600px] rounded-full bg-blue-600/15 blur-[140px] z-0" />
       <div className="pointer-events-none fixed top-1/3 -right-40 w-[550px] h-[550px] rounded-full bg-purple-600/15 blur-[150px] z-0" />
       <div className="pointer-events-none fixed -bottom-40 left-10 w-[500px] h-[500px] rounded-full bg-cyan-500/10 blur-[130px] z-0" />
 
-      {/* Toast Notification */}
       {toastMsg && (
         <div className="fixed bottom-6 right-6 z-50 bg-zinc-900/95 border border-blue-500/40 text-blue-200 px-4 py-3 rounded-2xl shadow-2xl backdrop-blur-xl text-xs font-semibold flex items-center gap-2">
           <span className="w-2 h-2 rounded-full bg-blue-400 animate-ping" />
@@ -184,7 +184,14 @@ export default function PolyCodeHubApp() {
         </div>
       )}
 
-      {/* Glassmorphic Top Navbar */}
+      {dbHealth.mode === 'schema_missing' && (
+        <div className="bg-amber-500/15 border-b border-amber-500/40 px-6 py-2.5 text-xs text-amber-200 flex items-center justify-between relative z-40">
+          <span>
+            ⚠️ <strong>Supabase Terdeteksi, tetapi Tabel Belum Dibuat:</strong> Buka Supabase Dashboard &rarr; SQL Editor, lalu jalankan isi file <code>supabase/migrations/001_initial_schema.sql</code>.
+          </span>
+        </div>
+      )}
+
       <header className="border-b border-white/10 px-6 py-4 flex flex-wrap items-center justify-between bg-zinc-950/75 sticky top-0 z-30 backdrop-blur-xl">
         <div className="flex items-center gap-3.5">
           <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 via-indigo-500 to-purple-600 flex items-center justify-center font-extrabold text-white shadow-lg shadow-blue-500/30 border border-white/20">
@@ -196,11 +203,11 @@ export default function PolyCodeHubApp() {
                 PolyCode Hub
               </span>
               <span className="text-[11px] px-2.5 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 font-mono font-semibold">
-                v0.3.0 Core
+                v0.4.1 Secured
               </span>
             </div>
             <p className="text-[11px] text-zinc-400 hidden sm:block">
-              Hover WebGL Limiter • Loop Guard Sandbox • Monaco Diff
+              Owner PIN Guard • Supabase Cloud • Hover WebGL
             </p>
           </div>
         </div>
@@ -242,34 +249,46 @@ export default function PolyCodeHubApp() {
         </nav>
 
         <div className="flex items-center gap-2.5">
-          <div className="text-xs px-3 py-1.5 rounded-xl bg-zinc-900/90 border border-white/10 flex items-center gap-2">
-            <span className={`w-2 h-2 rounded-full ${isSupabaseConfigured ? 'bg-emerald-400' : 'bg-blue-400 animate-pulse'}`} />
-            <span className="text-zinc-400">Storage:</span>
-            <span className={isSupabaseConfigured ? 'text-emerald-300 font-semibold' : 'text-blue-300 font-semibold'}>
-              {isSupabaseConfigured ? 'Supabase Cloud' : 'Persistent LocalStorage'}
+          <div
+            title={dbHealth.message}
+            className="text-xs px-3.5 py-1.5 rounded-xl bg-zinc-900/90 border border-white/10 flex items-center gap-2"
+          >
+            <span
+              className={`w-2 h-2 rounded-full ${
+                dbHealth.connected
+                  ? 'bg-emerald-400'
+                  : dbHealth.mode === 'schema_missing'
+                  ? 'bg-amber-400 animate-ping'
+                  : 'bg-blue-400 animate-pulse'
+              }`}
+            />
+            <span className="text-zinc-400">Backend:</span>
+            <span
+              className={
+                dbHealth.connected
+                  ? 'text-emerald-300 font-semibold'
+                  : dbHealth.mode === 'schema_missing'
+                  ? 'text-amber-300 font-semibold'
+                  : 'text-blue-300 font-semibold'
+              }
+            >
+              {dbHealth.connected
+                ? 'Supabase Cloud Connected'
+                : dbHealth.mode === 'schema_missing'
+                ? 'Supabase (Run SQL Schema!)'
+                : 'Local Hybrid API'}
             </span>
           </div>
-          {!isSupabaseConfigured && (
-            <button
-              onClick={handleResetDemo}
-              title="Reset LocalStorage ke 6 Aset Default"
-              className="text-[11px] px-2.5 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-zinc-400 hover:text-white transition"
-            >
-              Reset Data
-            </button>
-          )}
         </div>
       </header>
 
-      {/* Main Content */}
       <main className="flex-1 p-6 max-w-[1600px] w-full mx-auto relative z-10">
         {activeTab === 'explore' && (
           <div className="space-y-8">
-            {/* Luxury Hero Banner */}
             <div className="relative rounded-3xl border border-white/15 bg-gradient-to-br from-zinc-900/90 via-zinc-950/90 to-indigo-950/40 p-8 overflow-hidden shadow-2xl">
               <div className="max-w-3xl space-y-4 relative z-10">
-                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-400/30 text-blue-300 text-xs font-semibold">
-                  <span>✨ v0.3 PRODUCTION CORE • AUTO-SNAPSHOT & HOVER WEBGL</span>
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-400/30 text-emerald-300 text-xs font-semibold">
+                  <span>🔒 v0.4.1 PRODUCTION READY • OWNER PIN PROTECTED</span>
                 </div>
                 <h1 className="text-3xl sm:text-5xl font-extrabold tracking-tight text-white leading-tight">
                   Infinite 3D Assets.{' '}
@@ -278,12 +297,11 @@ export default function PolyCodeHubApp() {
                   </span>
                 </h1>
                 <p className="text-sm sm:text-base text-zinc-300 leading-relaxed max-w-2xl">
-                  Katalog ini kini dilengkapi <strong>Singleton Offscreen Snapshot</strong>: kartu di bawah menampilkan tangkapan gambar <code>.webp</code> ultra-ringan dan otomatis menyalakan mesin <strong>WebGL 3D Interaktif saat di-hover kursor</strong>—bebas <em>crash</em> meskipun memuat ratusan aset!
+                  Terhubung ke <strong>Supabase PostgreSQL Cloud</strong> dengan proteksi <strong>Owner PIN Guard</strong> untuk persetujuan <em>Pull Request</em> dan <em>Auto-Snapshot WebGL Limiter</em>.
                 </p>
               </div>
             </div>
 
-            {/* Filter & Search Bar */}
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
               <div className="flex flex-wrap gap-2">
                 {CATEGORIES.map((cat) => (
@@ -312,7 +330,6 @@ export default function PolyCodeHubApp() {
               </div>
             </div>
 
-            {/* Smart Catalog Grid with WebGL Hover Limiter */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-7">
               {filteredAssets.map((asset) => (
                 <CatalogCard3D
@@ -328,7 +345,6 @@ export default function PolyCodeHubApp() {
 
         {activeTab === 'studio' && (
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-[calc(100vh-125px)] min-h-[640px]">
-            {/* 3D Viewport Column */}
             <div className="lg:col-span-5 flex flex-col border border-white/15 rounded-3xl bg-zinc-900/50 backdrop-blur-xl overflow-hidden shadow-2xl">
               <div className="p-4 border-b border-white/10 flex flex-wrap items-center justify-between gap-2 text-xs bg-zinc-950/60">
                 <div>
@@ -422,7 +438,6 @@ export default function PolyCodeHubApp() {
               </div>
             </div>
 
-            {/* Parametric Sliders Column */}
             <div className="lg:col-span-3 border border-white/15 rounded-3xl bg-zinc-900/50 backdrop-blur-xl p-5 overflow-y-auto shadow-2xl">
               <ParametricControls
                 schema={compiled.schema}
@@ -432,7 +447,6 @@ export default function PolyCodeHubApp() {
               />
             </div>
 
-            {/* Live Code Editor Column */}
             <div className="lg:col-span-4 flex flex-col border border-white/15 rounded-3xl bg-zinc-900/50 backdrop-blur-xl overflow-hidden shadow-2xl">
               <div className="p-4 border-b border-white/10 flex items-center justify-between bg-zinc-950/60">
                 <div>
@@ -440,7 +454,7 @@ export default function PolyCodeHubApp() {
                     Sandboxed Three.js Script
                   </span>
                   <span className="text-[10px] text-emerald-400 font-mono">
-                    ✓ Loop Timeout & API Guard Active
+                    ✓ Client & Server API Guard Active
                   </span>
                 </div>
                 <div className="flex gap-2">
@@ -473,7 +487,7 @@ export default function PolyCodeHubApp() {
             <div className="border-b border-white/10 pb-4">
               <h2 className="text-2xl font-bold text-white">Open-Source 3D Pull Requests</h2>
               <p className="text-sm text-zinc-400 mt-1">
-                Bandingkan geometri lama vs geometri baru secara berdampingan beserta <strong>VS Code Monaco DiffEditor</strong> sebelum menyetujui perubahan.
+                Semua orang dapat mengajukan PR, namun persetujuan <strong>Approve & Merge</strong> dilindungi oleh <strong>Owner PIN Guard</strong>.
               </p>
             </div>
 
@@ -518,7 +532,6 @@ export default function PolyCodeHubApp() {
         )}
       </main>
 
-      {/* Modals */}
       {showForkModal && (
         <ForkPublishModal
           defaultTitle={selectedAsset.title}

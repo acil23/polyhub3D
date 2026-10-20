@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { ParamSchema, ParamValues, TelemetryStats } from '@/types/polycode';
+import { validateProceduralScript } from './validator';
 
 export interface CompileResult {
   group: THREE.Group | null;
@@ -9,26 +10,6 @@ export interface CompileResult {
   error: string | null;
 }
 
-const FORBIDDEN_PATTERNS: { pattern: RegExp; name: string }[] = [
-  { pattern: /\bwindow\b/, name: 'window' },
-  { pattern: /\bdocument\b/, name: 'document' },
-  { pattern: /\bfetch\b/, name: 'fetch()' },
-  { pattern: /\bXMLHttpRequest\b/, name: 'XMLHttpRequest' },
-  { pattern: /\blocalStorage\b/, name: 'localStorage' },
-  { pattern: /\bsessionStorage\b/, name: 'sessionStorage' },
-  { pattern: /\bindexedDB\b/, name: 'indexedDB' },
-  { pattern: /\beval\b/, name: 'eval()' },
-  { pattern: /\bFunction\b/, name: 'Function constructor' },
-  { pattern: /\bWebSocket\b/, name: 'WebSocket' },
-  { pattern: /\bnavigator\b/, name: 'navigator' },
-  { pattern: /\blocation\b/, name: 'location' },
-  { pattern: /\bcookie\b/, name: 'cookie' },
-];
-
-/**
- * Menyuntikkan pengaman iterasi & batas waktu (350ms) ke dalam loop for/while/do
- * untuk mencegah browser hang akibat infinite loop.
- */
 function injectLoopGuards(rawCode: string): string {
   let guarded = rawCode;
   guarded = guarded.replace(
@@ -48,16 +29,11 @@ export function compileProceduralCode(
 ): CompileResult {
   const start = performance.now();
   try {
-    // 1. Static Sandbox Security Inspection
-    for (const rule of FORBIDDEN_PATTERNS) {
-      if (rule.pattern.test(code)) {
-        throw new Error(
-          `Security Sandbox Violation: Penggunaan API '${rule.name}' dilarang di dalam skrip 3D.`
-        );
-      }
+    const check = validateProceduralScript(code);
+    if (!check.valid) {
+      throw new Error(check.reason);
     }
 
-    // 2. Inject Anti-Infinite Loop Guard
     const safeCode = injectLoopGuards(code);
 
     const wrappedBody = `

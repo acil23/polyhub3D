@@ -39,9 +39,9 @@ export function ForkPublishModal({
         <div className="flex items-center justify-between border-b border-white/10 pb-3">
           <div>
             <span className="text-[11px] font-bold uppercase tracking-wider text-blue-400">
-              Publish New Procedural 3D Asset
+              POST /api/assets • Publish 3D Model
             </span>
-            <h3 className="text-lg font-bold text-white mt-0.5">Fork & Terbitkan ke Katalog</h3>
+            <h3 className="text-lg font-bold text-white mt-0.5">Fork & Terbitkan ke Database</h3>
           </div>
           <button
             type="button"
@@ -61,7 +61,6 @@ export function ForkPublishModal({
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               className="w-full bg-zinc-900 border border-white/15 focus:border-blue-500 rounded-xl px-3.5 py-2.5 text-white outline-none"
-              placeholder="Contoh: Cyber Samurai Katana"
             />
           </div>
 
@@ -106,7 +105,7 @@ export function ForkPublishModal({
             type="submit"
             className="px-5 py-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white text-xs font-semibold shadow-lg shadow-blue-600/30"
           >
-            Publish Aset 3D
+            Publish ke Database
           </button>
         </div>
       </form>
@@ -146,7 +145,7 @@ export function SubmitPRModal({ targetAssetTitle, onConfirm, onClose }: SubmitPR
         <div className="flex items-center justify-between border-b border-white/10 pb-3">
           <div>
             <span className="text-[11px] font-bold uppercase tracking-wider text-amber-400">
-              Open-Source 3D Contribution
+              POST /api/pull-requests • Open-Source PR
             </span>
             <h3 className="text-lg font-bold text-white mt-0.5">
               Ajukan Pull Request ke {targetAssetTitle}
