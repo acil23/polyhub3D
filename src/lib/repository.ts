@@ -1,8 +1,8 @@
 import { INITIAL_ASSETS, INITIAL_PULL_REQUESTS } from './seedData';
 import { Asset3D, PullRequest3D } from '@/types/polycode';
 
-const LS_ASSETS_KEY = 'polycode_hub_assets_v041';
-const LS_PRS_KEY = 'polycode_hub_prs_v041';
+const LS_ASSETS_KEY = 'polycode_hub_assets_v042';
+const LS_PRS_KEY = 'polycode_hub_prs_v042';
 
 export interface BackendStatus {
   connected: boolean;
@@ -47,7 +47,15 @@ export async function fetchAllAssets(): Promise<Asset3D[]> {
 }
 
 export async function saveNewAsset(
-  payload: { title: string; category: Asset3D['category']; author_name: string; code: string; forked_from?: string },
+  payload: {
+    title: string;
+    category: Asset3D['category'];
+    author_name: string;
+    author_url?: string;
+    code: string;
+    forked_from?: string;
+    admin_pin?: string;
+  },
   currentAssets: Asset3D[]
 ): Promise<{ assets: Asset3D[]; created: Asset3D }> {
   const res = await fetch('/api/assets', {
@@ -66,6 +74,35 @@ export async function saveNewAsset(
     localStorage.setItem(LS_ASSETS_KEY, JSON.stringify(updated));
   }
   return { assets: updated, created };
+}
+
+export async function moderateAssetRepo(
+  assetId: string,
+  action: 'approve' | 'delete',
+  adminPin: string,
+  currentAssets: Asset3D[]
+): Promise<Asset3D[]> {
+  const res = await fetch(`/api/assets/${assetId}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action, admin_pin: adminPin })
+  });
+  const data = await res.json();
+  if (!res.ok) {
+    throw new Error(data.error || 'Gagal memproses moderasi aset');
+  }
+
+  const updated =
+    action === 'delete'
+      ? currentAssets.filter((a) => a.id !== assetId)
+      : currentAssets.map((a) =>
+          a.id === assetId ? { ...a, curation_status: 'verified' as const } : a
+        );
+
+  if (typeof window !== 'undefined') {
+    localStorage.setItem(LS_ASSETS_KEY, JSON.stringify(updated));
+  }
+  return updated;
 }
 
 export async function fetchAllPullRequests(): Promise<PullRequest3D[]> {
@@ -96,6 +133,7 @@ export async function createNewPullRequest(
     asset_id: string;
     asset_title: string;
     author_name: string;
+    author_url?: string;
     title: string;
     description: string;
     proposed_code: string;

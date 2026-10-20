@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 import { validateProceduralScript } from '@/lib/validator';
+import { extractAssetMeta, injectAssetMeta } from '@/lib/metadata';
 
 export const dynamic = 'force-dynamic';
 
@@ -13,7 +14,6 @@ export async function PATCH(
     const body = await request.json();
     const { action, asset_id, current_version, proposed_code, title, admin_pin } = body;
 
-    // 1. Verifikasi PIN Owner di Sisi Server (Mencegah Sabotase Pengunjung)
     const expectedPin = (process.env.ADMIN_MERGE_PIN || 'admin123').trim();
     if (!admin_pin || String(admin_pin).trim() !== expectedPin) {
       return NextResponse.json(
@@ -39,10 +39,25 @@ export async function PATCH(
       const nextVersion = `${parts[0] || 1}.${(parts[1] || 0) + 1}.0`;
 
       if (isSupabaseConfigured && supabase) {
+        const { data: existing } = await supabase
+          .from('assets')
+          .select('code, author_name')
+          .eq('id', asset_id)
+          .single();
+
+        const oldMeta = existing
+          ? extractAssetMeta(existing.code, existing.author_name)
+          : { status: 'verified' as const, authorUrl: '' };
+
+        const mergedWithMeta = injectAssetMeta(proposed_code, {
+          status: 'verified',
+          authorUrl: oldMeta.authorUrl
+        });
+
         await supabase
           .from('assets')
           .update({
-            code: proposed_code,
+            code: mergedWithMeta,
             version: nextVersion,
             updated_at: new Date().toISOString()
           })
@@ -57,7 +72,7 @@ export async function PATCH(
           {
             asset_id,
             version: nextVersion,
-            code: proposed_code,
+            code: mergedWithMeta,
             changelog: `Merged PR #${prId}: ${title || 'Community contribution'}`
           }
         ]);

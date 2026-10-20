@@ -11,6 +11,7 @@ export type ParamSchema = Record<string, ParamSchemaItem>;
 export type ParamValues = Record<string, any>;
 
 export type AssetCategory = 'Nature' | 'Sci-Fi' | 'Weapons' | 'Architecture' | 'Primitives';
+export type CurationStatus = 'verified' | 'community' | 'rejected';
 
 export interface Asset3D {
   id: string;
@@ -18,6 +19,8 @@ export interface Asset3D {
   title: string;
   category: AssetCategory;
   author_name: string;
+  author_url?: string;
+  curation_status?: CurationStatus;
   version: string;
   code: string;
   downloads: number;
@@ -30,6 +33,7 @@ export interface PullRequest3D {
   asset_id: string;
   asset_title?: string;
   author_name: string;
+  author_url?: string;
   title: string;
   description: string;
   proposed_code: string;

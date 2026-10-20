@@ -2,8 +2,8 @@ import './globals.css';
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'PolyCode Hub v0.4.1 | Full-Stack Procedural 3D Asset Platform',
-  description: 'Next.js 14 API Routes + Supabase PostgreSQL + Owner PIN Guard + Three.js Studio.'
+  title: 'PolyCode Hub v0.4.2 | Open-Source Procedural 3D Asset Platform',
+  description: 'Zero-storage procedural 3D asset studio with Creator Attribution, Anti-Spam Sandbox, and Git-style Pull Requests.'
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

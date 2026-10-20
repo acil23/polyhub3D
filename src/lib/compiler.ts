@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { ParamSchema, ParamValues, TelemetryStats } from '@/types/polycode';
 import { validateProceduralScript } from './validator';
+import { extractAssetMeta } from './metadata';
 
 export interface CompileResult {
   group: THREE.Group | null;
@@ -24,11 +25,12 @@ function injectLoopGuards(rawCode: string): string {
 }
 
 export function compileProceduralCode(
-  code: string,
+  rawCode: string,
   overrideValues?: ParamValues
 ): CompileResult {
   const start = performance.now();
   try {
+    const { cleanCode: code } = extractAssetMeta(rawCode, '');
     const check = validateProceduralScript(code);
     if (!check.valid) {
       throw new Error(check.reason);

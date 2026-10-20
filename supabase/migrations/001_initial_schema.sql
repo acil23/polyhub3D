@@ -45,6 +45,8 @@ DROP POLICY IF EXISTS "Public insert assets" ON public.assets;
 CREATE POLICY "Public insert assets" ON public.assets FOR INSERT WITH CHECK (true);
 DROP POLICY IF EXISTS "Public update assets" ON public.assets;
 CREATE POLICY "Public update assets" ON public.assets FOR UPDATE USING (true);
+DROP POLICY IF EXISTS "Public delete assets" ON public.assets;
+CREATE POLICY "Public delete assets" ON public.assets FOR DELETE USING (true);
 
 DROP POLICY IF EXISTS "Public read versions" ON public.asset_versions;
 CREATE POLICY "Public read versions" ON public.asset_versions FOR SELECT USING (true);
