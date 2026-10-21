@@ -37,7 +37,7 @@ export default function PolyCodeLogo({ className = 'w-10 h-10' }: { className?: 
         strokeWidth="1.5"
       />
       <polygon points="32,10 52,21.5 32,33 12,21.5" fill="url(#pcTop)" />
-      <polygon points="12,21.5 32,33 32,55 12,43.5" fill="url(#leftFace)" />
+      <polygon points="12,21.5 32,33 32,55 12,43.5" fill="url(#pcLeft)" />
       <polygon points="32,33 52,21.5 52,43.5 32,55" fill="url(#pcRight)" />
       <polyline
         points="12,21.5 32,33 52,21.5"

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import Viewport3D from '@/components/Viewport3D';
 import CatalogCard3D from '@/components/CatalogCard3D';
 import ParametricControls from '@/components/ParametricControls';
@@ -29,7 +29,6 @@ const CATEGORIES = ['All', 'Nature', 'Sci-Fi', 'Weapons', 'Architecture', 'Primi
 const LS_LANG_KEY = 'polycode_hub_lang';
 
 export default function PolyCodeHubApp() {
-  // Default language is English ('en'), with instant toggle to Indonesian ('id')
   const [lang, setLang] = useState<Language>('en');
   const t = DICT[lang];
 
@@ -45,6 +44,11 @@ export default function PolyCodeHubApp() {
 
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
   const [searchQuery, setSearchQuery] = useState<string>('');
+
+  // Pagination States
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [itemsPerPage, setItemsPerPage] = useState<number>(6);
+  const catalogTopRef = useRef<HTMLDivElement | null>(null);
 
   const [selectedAsset, setSelectedAsset] = useState<Asset3D>(INITIAL_ASSETS[0]);
   const [editorCode, setEditorCode] = useState<string>(INITIAL_ASSETS[0].code);
@@ -91,6 +95,11 @@ export default function PolyCodeHubApp() {
     fetchAllPullRequests().then(setPullRequests);
   }, []);
 
+  // Reset pagination to Page 1 whenever filter, search, or curation mode changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [selectedCategory, searchQuery, catalogMode, itemsPerPage]);
+
   const handleToggleLanguage = (nextLang: Language) => {
     setLang(nextLang);
     if (typeof window !== 'undefined') {
@@ -123,6 +132,23 @@ export default function PolyCodeHubApp() {
       return matchCat && matchSearch;
     });
   }, [assets, catalogMode, selectedCategory, searchQuery]);
+
+  // Pagination Slice Calculation
+  const totalPages = Math.max(1, Math.ceil(filteredAssets.length / itemsPerPage));
+  const safePage = Math.min(currentPage, totalPages);
+  const startIndex = (safePage - 1) * itemsPerPage;
+  const paginatedAssets = useMemo(
+    () => filteredAssets.slice(startIndex, startIndex + itemsPerPage),
+    [filteredAssets, startIndex, itemsPerPage]
+  );
+
+  const handlePageChange = (newPage: number) => {
+    const clamped = Math.max(1, Math.min(totalPages, newPage));
+    setCurrentPage(clamped);
+    if (catalogTopRef.current) {
+      catalogTopRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  };
 
   const handleSelectAsset = (asset: Asset3D) => {
     setSelectedAsset(asset);
@@ -251,7 +277,6 @@ export default function PolyCodeHubApp() {
       <div className="pointer-events-none fixed top-1/3 -right-40 w-[550px] h-[550px] rounded-full bg-purple-600/15 blur-[150px] z-0" />
       <div className="pointer-events-none fixed -bottom-40 left-10 w-[500px] h-[500px] rounded-full bg-cyan-500/10 blur-[130px] z-0" />
 
-      {/* Toast Notification with z-[100] so it ALWAYS appears in front of any dark modal backdrop */}
       {toastMsg && (
         <div
           className={`fixed top-20 right-6 z-[100] px-4 py-3.5 rounded-2xl shadow-2xl backdrop-blur-xl text-xs font-semibold flex items-center gap-2.5 max-w-md border transition-all ${
@@ -327,7 +352,6 @@ export default function PolyCodeHubApp() {
         </nav>
 
         <div className="flex items-center gap-2.5">
-          {/* Bilingual EN / ID Switcher */}
           <div className="flex items-center bg-zinc-900/90 p-1 rounded-xl border border-white/10 text-xs font-bold">
             <button
               onClick={() => handleToggleLanguage('en')}
@@ -372,7 +396,7 @@ export default function PolyCodeHubApp() {
 
       <main className="flex-1 p-6 max-w-[1600px] w-full mx-auto relative z-10">
         {activeTab === 'explore' && (
-          <div className="space-y-8">
+          <div className="space-y-8" ref={catalogTopRef}>
             <div className="relative rounded-3xl border border-white/15 bg-gradient-to-br from-zinc-900/90 via-zinc-950/90 to-indigo-950/40 p-8 overflow-hidden shadow-2xl">
               <div className="max-w-3xl space-y-4 relative z-10">
                 <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-400/30 text-emerald-300 text-xs font-semibold">
@@ -438,14 +462,29 @@ export default function PolyCodeHubApp() {
                 ))}
               </div>
 
-              <div className="relative min-w-[260px]">
-                <input
-                  type="text"
-                  placeholder={t.filter.searchPlaceholder}
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full bg-zinc-900/80 border border-white/15 focus:border-blue-500 rounded-xl px-4 py-2 text-xs text-white placeholder-zinc-500 outline-none transition"
-                />
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-1.5 text-xs text-zinc-400 bg-zinc-900/80 border border-white/15 rounded-xl px-3 py-1.5">
+                  <span>{t.pagination.perPage}</span>
+                  <select
+                    value={itemsPerPage}
+                    onChange={(e) => setItemsPerPage(Number(e.target.value))}
+                    className="bg-transparent text-white font-semibold outline-none cursor-pointer"
+                  >
+                    <option value={6} className="bg-zinc-900">6</option>
+                    <option value={9} className="bg-zinc-900">9</option>
+                    <option value={12} className="bg-zinc-900">12</option>
+                  </select>
+                </div>
+
+                <div className="relative min-w-[240px]">
+                  <input
+                    type="text"
+                    placeholder={t.filter.searchPlaceholder}
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full bg-zinc-900/80 border border-white/15 focus:border-blue-500 rounded-xl px-4 py-2 text-xs text-white placeholder-zinc-500 outline-none transition"
+                  />
+                </div>
               </div>
             </div>
 
@@ -457,18 +496,68 @@ export default function PolyCodeHubApp() {
                 <p className="text-xs text-zinc-500">{t.filter.emptySub}</p>
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-7">
-                {filteredAssets.map((asset) => (
-                  <CatalogCard3D
-                    key={`${asset.id}-${asset.version}-${asset.curation_status}`}
-                    asset={asset}
-                    lang={lang}
-                    onSelect={handleSelectAsset}
-                    onQuickExport={handleQuickExport}
-                    onModerate={handleModerateAsset}
-                  />
-                ))}
-              </div>
+              <>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-7">
+                  {paginatedAssets.map((asset) => (
+                    <CatalogCard3D
+                      key={`${asset.id}-${asset.version}-${asset.curation_status}`}
+                      asset={asset}
+                      lang={lang}
+                      onSelect={handleSelectAsset}
+                      onQuickExport={handleQuickExport}
+                      onModerate={handleModerateAsset}
+                    />
+                  ))}
+                </div>
+
+                {/* Luxury Glassmorphic Pagination Bar */}
+                <div className="pt-4 flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-white/10">
+                  <div className="text-xs text-zinc-400">
+                    {t.pagination.showing}{' '}
+                    <strong className="text-white">{startIndex + 1}</strong>–
+                    <strong className="text-white">
+                      {Math.min(startIndex + itemsPerPage, filteredAssets.length)}
+                    </strong>{' '}
+                    {t.pagination.of}{' '}
+                    <strong className="text-blue-400">{filteredAssets.length}</strong>{' '}
+                    {t.pagination.assets}
+                  </div>
+
+                  {totalPages > 1 && (
+                    <div className="flex items-center gap-1.5 bg-zinc-900/80 p-1.5 rounded-2xl border border-white/10">
+                      <button
+                        disabled={safePage <= 1}
+                        onClick={() => handlePageChange(safePage - 1)}
+                        className="px-3.5 py-1.5 rounded-xl text-xs font-semibold text-zinc-300 hover:text-white hover:bg-white/10 disabled:opacity-35 disabled:pointer-events-none transition"
+                      >
+                        {t.pagination.prev}
+                      </button>
+
+                      {Array.from({ length: totalPages }, (_, idx) => idx + 1).map((pageNum) => (
+                        <button
+                          key={pageNum}
+                          onClick={() => handlePageChange(pageNum)}
+                          className={`w-8 h-8 rounded-xl text-xs font-bold transition ${
+                            pageNum === safePage
+                              ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg shadow-blue-600/30'
+                              : 'text-zinc-400 hover:text-white hover:bg-white/5'
+                          }`}
+                        >
+                          {pageNum}
+                        </button>
+                      ))}
+
+                      <button
+                        disabled={safePage >= totalPages}
+                        onClick={() => handlePageChange(safePage + 1)}
+                        className="px-3.5 py-1.5 rounded-xl text-xs font-semibold text-zinc-300 hover:text-white hover:bg-white/10 disabled:opacity-35 disabled:pointer-events-none transition"
+                      >
+                        {t.pagination.next}
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </>
             )}
           </div>
         )}

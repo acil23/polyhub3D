@@ -41,7 +41,7 @@ export function exportToGLB(object3D: THREE.Object3D, asset: Pick<Asset3D, 'slug
   const clone = object3D.clone(true);
   clone.rotation.set(0, 0, 0);
   clone.userData = {
-    generator: 'PolyCode Hub v1.1.0',
+    generator: 'PolyCode Hub v1.2.0',
     title: asset.title,
     version: asset.version,
     creator: `@${asset.author_name}`,

@@ -12,7 +12,7 @@ export const DICT = {
       hybridMode: 'Hybrid Mode'
     },
     hero: {
-      badge: '✨ OPEN-SOURCE PROCEDURAL 3D REPOSITORY',
+      badge: '✨ 18+ PRO PROCEDURAL 3D ASSETS • ZERO BINARY STORAGE',
       title1: 'Infinite 3D Assets.',
       titleHighlight: 'Full Creator Credit.',
       desc: 'Share procedural 3D assets without creating an account. Your username & GitHub/portfolio link are displayed as an active badge on the catalog and permanently embedded inside every downloaded .OBJ & .GLB file!'
@@ -36,6 +36,15 @@ export const DICT = {
         Architecture: 'Architecture',
         Primitives: 'Primitives'
       } as Record<string, string>
+    },
+    pagination: {
+      showing: 'Showing',
+      of: 'of',
+      assets: '3D assets',
+      perPage: 'Per page:',
+      prev: '← Prev',
+      next: 'Next →',
+      page: 'Page'
     },
     card: {
       featuredBadge: '✓ Featured',
@@ -147,7 +156,7 @@ export const DICT = {
       hybridMode: 'Mode Hibrida'
     },
     hero: {
-      badge: '✨ REPOSITORI 3D PROSEDURAL OPEN-SOURCE',
+      badge: '✨ 18+ ASET 3D PROSEDURAL • TANPA PENYIMPANAN FILE BINER',
       title1: 'Aset 3D Tanpa Batas.',
       titleHighlight: 'Kredit Penuh Kreator.',
       desc: 'Bagikan aset 3D prosedural Anda tanpa perlu membuat akun. Nama & link portofolio/GitHub Anda tampil sebagai badge aktif di katalog dan tertanam otomatis di dalam setiap file .OBJ & .GLB yang diunduh!'
@@ -171,6 +180,15 @@ export const DICT = {
         Architecture: 'Arsitektur',
         Primitives: 'Primitif'
       } as Record<string, string>
+    },
+    pagination: {
+      showing: 'Menampilkan',
+      of: 'dari',
+      assets: 'aset 3D',
+      perPage: 'Per halaman:',
+      prev: '← Seblm',
+      next: 'Lanjut →',
+      page: 'Hal'
     },
     card: {
       featuredBadge: '✓ Featured',
@@ -273,10 +291,6 @@ export const DICT = {
   }
 };
 
-/**
- * Kamus penerjemah dua arah untuk label slider parameter 3D
- * Memastikan aset lama di Supabase yang berlafal Indonesia tetap tampil Bahasa Inggris saat mode EN aktif!
- */
 const PARAM_LABEL_MAP_ID_TO_EN: Record<string, string> = {
   'Jumlah Tingkat Daun': 'Foliage Tiers',
   'Tinggi Pohon': 'Tree Height',
@@ -305,7 +319,54 @@ const PARAM_LABEL_MAP_ID_TO_EN: Record<string, string> = {
   'Radius Inti Drone': 'Drone Core Radius',
   'Radius Cincin Gyro': 'Gyro Ring Radius',
   'Warna Pelindung': 'Hull Armor Color',
-  'Warna Sensor Optik': 'Optic Sensor Glow'
+  'Warna Sensor Optik': 'Optic Sensor Glow',
+  'Radius Gerbang': 'Portal Ring Radius',
+  'Jumlah Chevron Rune': 'Rune Chevrons',
+  'Warna Batu Kuno': 'Ancient Stone Color',
+  'Warna Pusaran Portal': 'Vortex Portal Glow',
+  'Lengkungan Bilah': 'Blade Curvature',
+  'Warna Tepi Plasma': 'Plasma Edge Glow',
+  'Warna Gagang Katana': 'Tsuka Grip Color',
+  'Jumlah Cincin Orbit': 'Orbital Rings',
+  'Radius Inti Matahari': 'Solar Core Radius',
+  'Warna Kuningan Emas': 'Brass Frame Color',
+  'Warna Matahari': 'Sun Core Glow',
+  'Lebar Pulau Batu': 'Floating Cliff Width',
+  'Kepadatan Sakura': 'Sakura Canopy Clusters',
+  'Warna Bunga Sakura': 'Sakura Blossom Color',
+  'Warna Batu Tebing': 'Cliff Stone Color',
+  'Ukuran Kepala Palu': 'Hammer Head Scale',
+  'Panjang Tangkai': 'Shaft Length',
+  'Warna Baja Palu': 'Forged Steel Color',
+  'Warna Energi Petir': 'Thunder Rune Glow',
+  'Tingkat Atap Pagoda': 'Pagoda Roof Tiers',
+  'Lebar Atap': 'Roof Eave Span',
+  'Warna Pilar Kuil': 'Temple Pillar Color',
+  'Warna Genteng Atap': 'Roof Tile Color',
+  'Jumlah Bilah Turbin': 'Turbine Blades',
+  'Panjang Mesin': 'Thruster Length',
+  'Warna Casing Titanium': 'Titanium Cowling Color',
+  'Warna Api Ion': 'Ion Exhaust Glow',
+  'Jumlah Jamur': 'Mushroom Stems',
+  'Lebar Tudung Jamur': 'Cap Umbrella Radius',
+  'Warna Bioluminesensi': 'Bioluminescent Glow',
+  'Warna Batang Jamur': 'Mushroom Stem Color',
+  'Tinggi Pilar Altar': 'Altar Pillar Height',
+  'Lebar Buku Sihir': 'Spellbook Span',
+  'Warna Marmer Altar': 'Marble Pillar Color',
+  'Warna Segel Sihir': 'Arcane Seal Glow',
+  'Panjang Laras Rel': 'Rail Barrel Length',
+  'Jumlah Koil Plasma': 'Induction Coils',
+  'Warna Bodi Taktis': 'Tactical Receiver Color',
+  'Warna Energi Koil': 'Gauss Coil Glow',
+  'Ukuran Kubus Luar': 'Outer Cube Scale',
+  'Ukuran Kubus Dalam': 'Inner Cube Scale',
+  'Warna Rangka Hypercube': 'Hypercube Frame Color',
+  'Warna Inti Singularitas': 'Singularity Core Glow',
+  'Radius Parabola': 'Dish Reflector Radius',
+  'Kemiringan Antena': 'Dish Elevation Tilt',
+  'Warna Reflektor': 'Dish Alloy Color',
+  'Warna Sinyal Suar': 'Beacon Signal Glow'
 };
 
 const PARAM_LABEL_MAP_EN_TO_ID: Record<string, string> = Object.entries(

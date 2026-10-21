@@ -20,24 +20,38 @@ export async function GET() {
       .order('created_at', { ascending: false });
 
     if (!error && data) {
-      if (data.length === 0) {
-        const dbRows = INITIAL_ASSETS.map(({ author_url, curation_status, ...rest }) => ({
+      // Auto-sync any missing official seed assets (e.g. asset-7 through asset-18) into Supabase!
+      const existingIds = new Set(data.map((row: any) => row.id));
+      const existingSlugs = new Set(data.map((row: any) => row.slug));
+
+      const missingSeeds = INITIAL_ASSETS.filter(
+        (seed) => !existingIds.has(seed.id) && !existingSlugs.has(seed.slug)
+      );
+
+      if (missingSeeds.length > 0) {
+        const dbRowsToInsert = missingSeeds.map(({ author_url, curation_status, ...rest }) => ({
           ...rest,
           code: injectAssetMeta(rest.code, {
             status: curation_status || 'verified',
             authorUrl: author_url || `https://github.com/${rest.author_name}`
           })
         }));
-        const { data: seeded, error: seedErr } = await supabase
+
+        const { data: insertedRows } = await supabase
           .from('assets')
-          .upsert(dbRows)
+          .upsert(dbRowsToInsert)
           .select();
-        if (!seedErr && seeded) {
-          const hydrated = seeded.map(hydrateAssetRow).filter((a) => a.curation_status !== 'rejected');
-          return NextResponse.json({ source: 'supabase_seeded', assets: hydrated });
-        }
+
+        const combined = [...(insertedRows || []), ...data];
+        const hydrated = combined
+          .map(hydrateAssetRow)
+          .filter((a) => a.curation_status !== 'rejected');
+        return NextResponse.json({ source: 'supabase_synced', assets: hydrated });
       }
-      const hydrated = data.map(hydrateAssetRow).filter((a) => a.curation_status !== 'rejected');
+
+      const hydrated = data
+        .map(hydrateAssetRow)
+        .filter((a) => a.curation_status !== 'rejected');
       return NextResponse.json({ source: 'supabase_cloud', assets: hydrated });
     }
   }

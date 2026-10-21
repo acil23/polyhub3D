@@ -1,8 +1,8 @@
 import { INITIAL_ASSETS, INITIAL_PULL_REQUESTS } from './seedData';
 import { Asset3D, PullRequest3D } from '@/types/polycode';
 
-const LS_ASSETS_KEY = 'polycode_hub_assets_v110';
-const LS_PRS_KEY = 'polycode_hub_prs_v110';
+const LS_ASSETS_KEY = 'polycode_hub_assets_v120';
+const LS_PRS_KEY = 'polycode_hub_prs_v120';
 
 export interface BackendStatus {
   connected: boolean;
@@ -27,10 +27,11 @@ export async function fetchAllAssets(): Promise<Asset3D[]> {
   try {
     const res = await fetch('/api/assets', { cache: 'no-store' });
     const data = await res.json();
-    if (data.assets && Array.isArray(data.assets)) {
-      if (data.source === 'supabase_cloud' || data.source === 'supabase_seeded') {
-        return data.assets;
+    if (data.assets && Array.isArray(data.assets) && data.assets.length > 0) {
+      if (typeof window !== 'undefined') {
+        localStorage.setItem(LS_ASSETS_KEY, JSON.stringify(data.assets));
       }
+      return data.assets;
     }
   } catch {}
 
@@ -38,7 +39,10 @@ export async function fetchAllAssets(): Promise<Asset3D[]> {
     const saved = localStorage.getItem(LS_ASSETS_KEY);
     if (saved) {
       try {
-        return JSON.parse(saved);
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length >= INITIAL_ASSETS.length) {
+          return parsed;
+        }
       } catch {}
     }
     localStorage.setItem(LS_ASSETS_KEY, JSON.stringify(INITIAL_ASSETS));
